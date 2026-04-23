@@ -171,8 +171,10 @@ https://myaccount.google.com/permissions.
 - **"Not live" when you're actually live.** Click **Refresh**. YouTube
   can take ~30s after going live before `liveBroadcasts.list(active)`
   returns it.
-- **Apply fails with 401.** Your refresh token was revoked. Click
-  **Settings → Disconnect account**, then Connect again.
+- **Apply fails with 401.** Your refresh token was revoked. StreamManager
+  pops a "YouTube access expired" modal automatically — click **Reconnect**
+  to redo the consent flow, then your action retries. If the modal doesn't
+  appear, click **Disconnect** in the top bar and Connect again.
 - **Apply fails with 403 + "quota exceeded".** Extremely unlikely — one
   Apply is ~150 quota units against a daily 10,000 default. Check that
   the YouTube Data API v3 is still enabled in Google Cloud.

@@ -18,8 +18,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var vm = AppHost.Services?.GetRequiredService<MainWindowViewModel>()
-                ?? new MainWindowViewModel();
+            var vm = AppHost.Services!.GetRequiredService<MainWindowViewModel>();
 
             desktop.MainWindow = new MainWindow
             {

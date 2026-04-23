@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StreamManager.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="380" d:DesignHeight="170"
+        x:Class="StreamManager.App.Views.ReauthModalWindow"
+        x:DataType="vm:ReauthModalViewModel"
+        Width="380" Height="170"
+        Title="StreamManager"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <StackPanel Margin="20" Spacing="16">
+        <TextBlock Text="YouTube access expired"
+                   FontWeight="SemiBold" FontSize="16"/>
+        <TextBlock TextWrapping="Wrap"
+                   Text="StreamManager couldn't talk to YouTube with the saved credentials. Reconnect to continue."/>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Padding="12,4"/>
+            <Button Content="Reconnect" Command="{Binding ReconnectCommand}" Padding="12,4"
+                    Classes="accent"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

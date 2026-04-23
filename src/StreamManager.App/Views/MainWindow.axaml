@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:StreamManager.App.ViewModels"
+        xmlns:views="using:StreamManager.App.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="900"
@@ -34,232 +35,241 @@
         </Style>
     </Window.Styles>
 
-    <Design.DataContext>
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:FirstRunSetupViewModel">
+            <views:FirstRunSetupView/>
+        </DataTemplate>
+    </Window.DataTemplates>
 
-    <DockPanel>
-        <!-- Top bar -->
-        <Border DockPanel.Dock="Top" Padding="12,8" Background="#11000000">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <TextBlock Grid.Column="0" Text="StreamManager" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Opacity="0.6"
-                           Text="Not connected"/>
-                <Button Grid.Column="2" Content="⚙ Settings" IsEnabled="False"/>
-            </Grid>
-        </Border>
+    <Grid>
+        <!-- First-run wizard: shown instead of the main shell until a client is configured. -->
+        <ContentControl Content="{Binding FirstRunViewModel}"
+                        IsVisible="{Binding IsFirstRun}"/>
 
-        <!-- Preset action bar (slice 7 wires these up; stubbed here) -->
-        <Border DockPanel.Dock="Top" Padding="12,8">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="Load preset ▾" IsEnabled="False"/>
-                <Button Content="Save as preset…" IsEnabled="False"/>
-                <Button Content="Update preset"
-                        IsEnabled="{Binding StreamForm.CanUpdatePreset}"/>
-            </StackPanel>
-        </Border>
+        <!-- Main shell: visible once a client is configured. -->
+        <DockPanel IsVisible="{Binding !IsFirstRun}">
+            <!-- Top bar -->
+            <Border DockPanel.Dock="Top" Padding="12,8" Background="#11000000">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Grid.Column="0" Text="StreamManager" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <views:ConnectAccountView Grid.Column="1" Margin="16,0"
+                                              DataContext="{Binding ConnectAccount}"/>
+                    <Button Grid.Column="2" Content="⚙ Settings" IsEnabled="False"/>
+                </Grid>
+            </Border>
 
-        <!-- Bottom bar: status + Apply -->
-        <Border DockPanel.Dock="Bottom" Padding="12,8" Background="#11000000">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding StreamForm.DirtyStatusLine}"
-                           VerticalAlignment="Center"/>
-                <Button Grid.Column="1"
-                        Content="Apply to live stream ▶"
-                        IsEnabled="{Binding StreamForm.CanApply}"/>
-            </Grid>
-        </Border>
-
-        <ScrollViewer>
-            <StackPanel Margin="16" DataContext="{Binding StreamForm}"
-                        x:DataType="vm:StreamFormViewModel">
-
-                <!-- Basics -->
-                <StackPanel Margin="{StaticResource SectionMargin}">
-                    <TextBlock Classes="section" Text="Basics"/>
-
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Title"/>
-                        <TextBox Grid.Column="1" Text="{Binding Title}"/>
-                    </Grid>
-
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Description" VerticalAlignment="Top"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding Description}"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 MinHeight="100"/>
-                    </Grid>
-
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Category"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{Binding CategoryId, FallbackValue='—', TargetNullValue='—'}"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Opacity="0.5" VerticalAlignment="Center"
-                                       Text="(dropdown populated in slice 6)"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Tags" VerticalAlignment="Top"/>
-                        <StackPanel Grid.Column="1">
-                            <ItemsControl ItemsSource="{Binding Tags}" x:Name="TagsList">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="x:String">
-                                        <Border Classes="chip">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                                                <Button Content="×" Padding="4,0"
-                                                        Command="{Binding #TagsList.((vm:StreamFormViewModel)DataContext).RemoveTagCommand}"
-                                                        CommandParameter="{Binding}"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
-                                <TextBox Grid.Column="0"
-                                         x:Name="TagInput"
-                                         Text="{Binding PendingTagInput}"
-                                         PlaceholderText="Type a tag and press Enter">
-                                    <TextBox.KeyBindings>
-                                        <KeyBinding Gesture="Enter"
-                                                    Command="{Binding AddPendingTagCommand}"/>
-                                    </TextBox.KeyBindings>
-                                </TextBox>
-                                <Button Grid.Column="1" Content="Add" Margin="6,0,0,0"
-                                        Command="{Binding AddPendingTagCommand}"/>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
+            <!-- Preset action bar (slice 7 wires these up; stubbed here) -->
+            <Border DockPanel.Dock="Top" Padding="12,8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Load preset ▾" IsEnabled="False"/>
+                    <Button Content="Save as preset…" IsEnabled="False"/>
+                    <Button Content="Update preset"
+                            IsEnabled="{Binding StreamForm.CanUpdatePreset}"/>
                 </StackPanel>
+            </Border>
 
-                <!-- Privacy -->
-                <StackPanel Margin="{StaticResource SectionMargin}">
-                    <TextBlock Classes="section" Text="Privacy"/>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Privacy"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
-                            <ComboBox ItemsSource="{Binding PrivacyStatusOptions}"
-                                      SelectedItem="{Binding PrivacyStatus}"
+            <!-- Bottom bar: status + Apply -->
+            <Border DockPanel.Dock="Bottom" Padding="12,8" Background="#11000000">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding StreamForm.DirtyStatusLine}"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1"
+                            Content="Apply to live stream ▶"
+                            IsEnabled="{Binding StreamForm.CanApply}"/>
+                </Grid>
+            </Border>
+
+            <ScrollViewer>
+                <StackPanel Margin="16" DataContext="{Binding StreamForm}"
+                            x:DataType="vm:StreamFormViewModel">
+
+                    <!-- Basics -->
+                    <StackPanel Margin="{StaticResource SectionMargin}">
+                        <TextBlock Classes="section" Text="Basics"/>
+
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Title"/>
+                            <TextBox Grid.Column="1" Text="{Binding Title}"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Description" VerticalAlignment="Top"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding Description}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     MinHeight="100"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Category"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding CategoryId, FallbackValue='—', TargetNullValue='—'}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Opacity="0.5" VerticalAlignment="Center"
+                                           Text="(dropdown populated in slice 6)"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Tags" VerticalAlignment="Top"/>
+                            <StackPanel Grid.Column="1">
+                                <ItemsControl ItemsSource="{Binding Tags}" x:Name="TagsList">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="x:String">
+                                            <Border Classes="chip">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                                    <Button Content="×" Padding="4,0"
+                                                            Command="{Binding #TagsList.((vm:StreamFormViewModel)DataContext).RemoveTagCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                    <TextBox Grid.Column="0"
+                                             x:Name="TagInput"
+                                             Text="{Binding PendingTagInput}"
+                                             PlaceholderText="Type a tag and press Enter">
+                                        <TextBox.KeyBindings>
+                                            <KeyBinding Gesture="Enter"
+                                                        Command="{Binding AddPendingTagCommand}"/>
+                                        </TextBox.KeyBindings>
+                                    </TextBox>
+                                    <Button Grid.Column="1" Content="Add" Margin="6,0,0,0"
+                                            Command="{Binding AddPendingTagCommand}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Privacy -->
+                    <StackPanel Margin="{StaticResource SectionMargin}">
+                        <TextBlock Classes="section" Text="Privacy"/>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Privacy"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                                <ComboBox ItemsSource="{Binding PrivacyStatusOptions}"
+                                          SelectedItem="{Binding PrivacyStatus}"
+                                          MinWidth="140"/>
+                                <CheckBox IsChecked="{Binding SelfDeclaredMadeForKids}"
+                                          Content="Made for kids"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Playback & DVR -->
+                    <StackPanel Margin="{StaticResource SectionMargin}">
+                        <TextBlock Classes="section" Text="Playback &amp; DVR"/>
+                        <WrapPanel>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableDvr}" Content="DVR"/>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableEmbed}" Content="Embed"/>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableClosedCaptions}" Content="Closed captions"/>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableAutoStart}" Content="Auto-start"/>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableAutoStop}" Content="Auto-stop"/>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding RecordFromStart}" Content="Record from start"/>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding StartWithSlate}" Content="Start with slate"/>
+                            <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableContentEncryption}" Content="Content encryption"/>
+                        </WrapPanel>
+                        <Grid ColumnDefinitions="140,*" Margin="0,8,0,0">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Captions type"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding ClosedCaptionsTypeOptions}"
+                                      SelectedItem="{Binding ClosedCaptionsType}"
+                                      MinWidth="220"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Advanced -->
+                    <StackPanel Margin="{StaticResource SectionMargin}">
+                        <TextBlock Classes="section" Text="Advanced"/>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Latency"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding LatencyPreferenceOptions}"
+                                      SelectedItem="{Binding LatencyPreference}"
                                       MinWidth="140"/>
-                            <CheckBox IsChecked="{Binding SelfDeclaredMadeForKids}"
-                                      Content="Made for kids"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Projection"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding ProjectionOptions}"
+                                      SelectedItem="{Binding Projection}"
+                                      MinWidth="140"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Stereo layout"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding StereoLayoutOptions}"
+                                      SelectedItem="{Binding StereoLayout}"
+                                      MinWidth="140"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Stream delay (ms)"/>
+                            <NumericUpDown Grid.Column="1"
+                                           Value="{Binding BroadcastStreamDelayMs}"
+                                           Minimum="0" Maximum="60000"
+                                           Increment="500"
+                                           MinWidth="140"/>
+                        </Grid>
+                        <WrapPanel>
+                            <CheckBox Margin="0,4,16,4" IsChecked="{Binding EnableLowLatency}" Content="Enable low latency (legacy)"/>
+                            <CheckBox Margin="0,4,16,4" IsChecked="{Binding EnableMonitorStream}" Content="Monitor stream"/>
+                        </WrapPanel>
+                    </StackPanel>
 
-                <!-- Playback & DVR -->
-                <StackPanel Margin="{StaticResource SectionMargin}">
-                    <TextBlock Classes="section" Text="Playback &amp; DVR"/>
-                    <WrapPanel>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableDvr}" Content="DVR"/>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableEmbed}" Content="Embed"/>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableClosedCaptions}" Content="Closed captions"/>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableAutoStart}" Content="Auto-start"/>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableAutoStop}" Content="Auto-stop"/>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding RecordFromStart}" Content="Record from start"/>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding StartWithSlate}" Content="Start with slate"/>
-                        <CheckBox Margin="0,0,16,4" IsChecked="{Binding EnableContentEncryption}" Content="Content encryption"/>
-                    </WrapPanel>
-                    <Grid ColumnDefinitions="140,*" Margin="0,8,0,0">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Captions type"/>
-                        <ComboBox Grid.Column="1"
-                                  ItemsSource="{Binding ClosedCaptionsTypeOptions}"
-                                  SelectedItem="{Binding ClosedCaptionsType}"
-                                  MinWidth="220"/>
-                    </Grid>
-                </StackPanel>
+                    <!-- Scheduling -->
+                    <StackPanel Margin="{StaticResource SectionMargin}">
+                        <TextBlock Classes="section" Text="Scheduling"/>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Start (ISO-8601)"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding ScheduledStartTimeText}"
+                                     PlaceholderText="2026-04-23T18:00:00Z"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="End (ISO-8601)"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding ScheduledEndTimeText}"
+                                     PlaceholderText="2026-04-23T21:00:00Z"/>
+                        </Grid>
+                    </StackPanel>
 
-                <!-- Advanced -->
-                <StackPanel Margin="{StaticResource SectionMargin}">
-                    <TextBlock Classes="section" Text="Advanced"/>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Latency"/>
-                        <ComboBox Grid.Column="1"
-                                  ItemsSource="{Binding LatencyPreferenceOptions}"
-                                  SelectedItem="{Binding LatencyPreference}"
-                                  MinWidth="140"/>
-                    </Grid>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Projection"/>
-                        <ComboBox Grid.Column="1"
-                                  ItemsSource="{Binding ProjectionOptions}"
-                                  SelectedItem="{Binding Projection}"
-                                  MinWidth="140"/>
-                    </Grid>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Stereo layout"/>
-                        <ComboBox Grid.Column="1"
-                                  ItemsSource="{Binding StereoLayoutOptions}"
-                                  SelectedItem="{Binding StereoLayout}"
-                                  MinWidth="140"/>
-                    </Grid>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Stream delay (ms)"/>
-                        <NumericUpDown Grid.Column="1"
-                                       Value="{Binding BroadcastStreamDelayMs}"
-                                       Minimum="0" Maximum="60000"
-                                       Increment="500"
-                                       MinWidth="140"/>
-                    </Grid>
-                    <WrapPanel>
-                        <CheckBox Margin="0,4,16,4" IsChecked="{Binding EnableLowLatency}" Content="Enable low latency (legacy)"/>
-                        <CheckBox Margin="0,4,16,4" IsChecked="{Binding EnableMonitorStream}" Content="Monitor stream"/>
-                    </WrapPanel>
-                </StackPanel>
+                    <!-- Language -->
+                    <StackPanel Margin="{StaticResource SectionMargin}">
+                        <TextBlock Classes="section" Text="Language"/>
+                        <Grid ColumnDefinitions="140,*,140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Default"/>
+                            <TextBox Grid.Column="1" Text="{Binding DefaultLanguage}" PlaceholderText="en (slice 6)"/>
+                            <TextBlock Grid.Column="2" Classes="label" Margin="16,0,0,0" Text="Audio"/>
+                            <TextBox Grid.Column="3" Text="{Binding DefaultAudioLanguage}" PlaceholderText="en (slice 6)"/>
+                        </Grid>
+                    </StackPanel>
 
-                <!-- Scheduling -->
-                <StackPanel Margin="{StaticResource SectionMargin}">
-                    <TextBlock Classes="section" Text="Scheduling"/>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Start (ISO-8601)"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ScheduledStartTimeText}"
-                                 PlaceholderText="2026-04-23T18:00:00Z"/>
-                    </Grid>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="End (ISO-8601)"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ScheduledEndTimeText}"
-                                 PlaceholderText="2026-04-23T21:00:00Z"/>
-                    </Grid>
-                </StackPanel>
+                    <!-- Thumbnail -->
+                    <StackPanel Margin="{StaticResource SectionMargin}">
+                        <TextBlock Classes="section" Text="Thumbnail"/>
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Path"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{Binding ThumbnailPath, FallbackValue='(none)', TargetNullValue='(none)'}"/>
+                                <TextBlock Opacity="0.5" VerticalAlignment="Center"
+                                           Text="(picker in slice 8)"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
 
-                <!-- Language -->
-                <StackPanel Margin="{StaticResource SectionMargin}">
-                    <TextBlock Classes="section" Text="Language"/>
-                    <Grid ColumnDefinitions="140,*,140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Default"/>
-                        <TextBox Grid.Column="1" Text="{Binding DefaultLanguage}" PlaceholderText="en (slice 6)"/>
-                        <TextBlock Grid.Column="2" Classes="label" Margin="16,0,0,0" Text="Audio"/>
-                        <TextBox Grid.Column="3" Text="{Binding DefaultAudioLanguage}" PlaceholderText="en (slice 6)"/>
-                    </Grid>
                 </StackPanel>
-
-                <!-- Thumbnail -->
-                <StackPanel Margin="{StaticResource SectionMargin}">
-                    <TextBlock Classes="section" Text="Thumbnail"/>
-                    <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                        <TextBlock Grid.Column="0" Classes="label" Text="Path"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                            <TextBlock VerticalAlignment="Center"
-                                       Text="{Binding ThumbnailPath, FallbackValue='(none)', TargetNullValue='(none)'}"/>
-                            <TextBlock Opacity="0.5" VerticalAlignment="Center"
-                                       Text="(picker in slice 8)"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-
-            </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Grid>
 </Window>

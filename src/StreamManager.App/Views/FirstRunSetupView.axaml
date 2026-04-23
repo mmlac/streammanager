@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StreamManager.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+             x:Class="StreamManager.App.Views.FirstRunSetupView"
+             x:DataType="vm:FirstRunSetupViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="32" Spacing="16" MaxWidth="560" HorizontalAlignment="Center">
+            <TextBlock Text="Welcome to StreamManager"
+                       FontSize="22"
+                       FontWeight="SemiBold"/>
+
+            <TextBlock TextWrapping="Wrap"
+                       Text="Before you can connect to YouTube, paste your Google Cloud OAuth 2.0 Desktop client ID and secret below. You only need to do this once. See README.md for the step-by-step walkthrough of creating one."/>
+
+            <TextBlock Text="Client ID" FontWeight="SemiBold"/>
+            <TextBox Text="{Binding ClientId, Mode=TwoWay}"
+                     PlaceholderText="123456789-abcde.apps.googleusercontent.com"/>
+
+            <TextBlock Text="Client Secret" FontWeight="SemiBold"/>
+            <TextBox Text="{Binding ClientSecret, Mode=TwoWay}"
+                     PasswordChar="•"
+                     PlaceholderText="(stays on your machine)"/>
+
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="#c62828"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       TextWrapping="Wrap"/>
+
+            <Button Content="Save and continue"
+                    Command="{Binding SaveCommand}"
+                    HorizontalAlignment="Right"
+                    Padding="16,8"
+                    IsEnabled="{Binding !IsBusy}"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

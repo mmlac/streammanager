@@ -1,10 +1,14 @@
+using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using StreamManager.App.Auth;
 using StreamManager.App.ViewModels;
 using StreamManager.Core;
+using StreamManager.Core.Auth;
 
 namespace StreamManager.App;
 
@@ -13,12 +17,8 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        // Build the host (DI + logging + app paths) before Avalonia so the
-        // log sink is ready for the very first startup line.
         using var host = CreateHostBuilder(args).Build();
 
-        // Make sure app-data and log directories exist on first launch
-        // (before Serilog starts writing).
         host.Services.GetRequiredService<IAppPaths>().EnsureDirectoriesExist();
 
         var logger = host.Services.GetRequiredService<ILogger<Application>>();
@@ -49,9 +49,6 @@ public static class Program
             {
                 var paths = services.GetRequiredService<IAppPaths>();
                 paths.EnsureDirectoriesExist();
-                // Per acceptance criteria the file name is streammanager-YYYY-MM-DD.log.
-                // Serilog's built-in rolling interval uses yyyyMMdd with no separators,
-                // so we bake today's date into the path explicitly.
                 var today = DateTime.Now.ToString("yyyy-MM-dd");
                 var logPath = Path.Combine(paths.LogsDirectory, $"streammanager-{today}.log");
                 cfg
@@ -64,7 +61,49 @@ public static class Program
             .ConfigureServices((_, services) =>
             {
                 services.AddStreamManagerCore();
+                RegisterPlatformTokenStore(services);
+                services.AddSingleton<IReauthPrompt, UiReauthPrompt>();
+                services.AddSingleton<IDirtyFormGuard, PassthroughDirtyFormGuard>();
+                services.AddSingleton(sp =>
+                    (IClassicDesktopStyleApplicationLifetime)Avalonia.Application.Current!.ApplicationLifetime!);
+                services.AddTransient<FirstRunSetupViewModel>();
+                services.AddSingleton<ConnectAccountViewModel>();
                 services.AddSingleton<StreamFormViewModel>();
                 services.AddSingleton<MainWindowViewModel>();
             });
+
+    // Bind ITokenStore to the appropriate platform implementation. Each
+    // platform project carries native-API code (Keychain Services / Credential
+    // Manager) that only makes sense on its target OS, so we never register
+    // the wrong one.
+    private static void RegisterPlatformTokenStore(IServiceCollection services)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            services.AddSingleton<ITokenStore, Platform.Windows.WindowsTokenStore>();
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            services.AddSingleton<ITokenStore, Platform.Mac.MacTokenStore>();
+        }
+        else
+        {
+            // Linux / unsupported: keep DI satisfied so dev builds don't crash,
+            // but route to a no-op that will surface an error if used.
+            services.AddSingleton<ITokenStore, UnsupportedPlatformTokenStore>();
+        }
+    }
+
+    // Slot used on platforms outside the design's supported targets (Windows,
+    // macOS) to keep DI complete during development. Any actual call throws
+    // so failures are loud.
+    private sealed class UnsupportedPlatformTokenStore : ITokenStore
+    {
+        private static InvalidOperationException Fail() =>
+            new("Token storage is not implemented on this platform; supported targets are Windows and macOS.");
+
+        public Task<string?> GetRefreshTokenAsync(CancellationToken ct = default) => throw Fail();
+        public Task SetRefreshTokenAsync(string refreshToken, CancellationToken ct = default) => throw Fail();
+        public Task DeleteRefreshTokenAsync(CancellationToken ct = default) => throw Fail();
+    }
 }

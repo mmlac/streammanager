@@ -29,5 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StreamManager.Core\StreamManager.Core.csproj" />
+    <ProjectReference Include="..\StreamManager.Platform.Mac\StreamManager.Platform.Mac.csproj" />
+    <ProjectReference Include="..\StreamManager.Platform.Windows\StreamManager.Platform.Windows.csproj" />
   </ItemGroup>
 </Project>
