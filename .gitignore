@@ -1,0 +1,16 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+.DS_Store
+out/
+TestResults/
+
+# Gas Town polecat workspace artifacts (not code)
+.beads/
+.claude/
+.runtime/
+CLAUDE.md

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StreamManager.App/StreamManager.App.csproj" />
+    <Project Path="src/StreamManager.Core/StreamManager.Core.csproj" />
+    <Project Path="src/StreamManager.Platform.Mac/StreamManager.Platform.Mac.csproj" />
+    <Project Path="src/StreamManager.Platform.Windows/StreamManager.Platform.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StreamManager.Core.Tests/StreamManager.Core.Tests.csproj" />
+  </Folder>
+</Solution>
