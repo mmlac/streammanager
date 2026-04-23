@@ -69,6 +69,9 @@ public static class Program
                 services.AddSingleton<IStreamFetchCoordinator, StreamFetchCoordinator>();
                 services.AddSingleton<IUnreachableThumbnailPrompt, UiUnreachableThumbnailPrompt>();
                 services.AddSingleton<IThumbnailFileChecker, FileSystemThumbnailChecker>();
+                services.AddSingleton<IThumbnailFileValidator, FileSystemThumbnailValidator>();
+                services.AddSingleton<IThumbnailPickerService, AvaloniaThumbnailPickerService>();
+                services.AddSingleton<IThumbnailValidationPrompt, UiThumbnailValidationPrompt>();
                 services.AddSingleton<IApplyOrchestrator, ApplyOrchestrator>();
                 services.AddSingleton<Presets.IPresetDialogs, Presets.AvaloniaPresetDialogs>();
                 services.AddSingleton<TimeProvider>(TimeProvider.System);
@@ -84,6 +87,7 @@ public static class Program
                 services.AddSingleton<StreamFormViewModel>();
                 services.AddSingleton<PresetActionsViewModel>();
                 services.AddSingleton<ReferenceDataViewModel>();
+                services.AddSingleton<ThumbnailPickerViewModel>();
                 services.AddSingleton<MainWindowViewModel>();
             });
 

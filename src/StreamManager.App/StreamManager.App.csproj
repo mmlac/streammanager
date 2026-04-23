@@ -38,6 +38,10 @@
     actually exists so plain `dotnet build` during dev doesn't fail.
   -->
   <ItemGroup>
+    <InternalsVisibleTo Include="StreamManager.Core.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="..\..\streammanager.png" Link="Assets\streammanager.png" Visible="false" />
   </ItemGroup>

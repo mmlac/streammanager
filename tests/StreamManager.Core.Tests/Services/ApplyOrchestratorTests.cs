@@ -197,6 +197,28 @@ public class ApplyOrchestratorTests
     }
 
     [Fact]
+    public async Task ThumbnailFileDisappearsBetweenPreflightAndUpload_ReportsStep3_DoesNotClearPath()
+    {
+        // Race case from slice-8 acceptance: pre-flight sees reachable, but the
+        // file is deleted / drive unmounts between step 1 and step 4. The
+        // uploader throws FileNotFoundException, which must surface as a
+        // step-3 failure without mutating ThumbnailPath.
+        var harness = NewHarness();
+        harness.SeedLiveBroadcast(thumbnailPath: null);
+        harness.Form.ThumbnailPath = "/tmp/raced.jpg";
+        harness.Checker.Reachable["/tmp/raced.jpg"] = true;
+        harness.Uploader.Throw = new FileNotFoundException("gone", "/tmp/raced.jpg");
+
+        var result = await harness.Orchestrator.ApplyAsync(CancellationToken.None);
+
+        Assert.Equal(ApplyOutcome.Failed, result.Outcome);
+        Assert.Equal(ApplyStep.UpdateThumbnail, result.FailedStep);
+        Assert.Contains("Step 3", result.ErrorMessage);
+        // Critical design invariant: ThumbnailPath is never mutated by Apply.
+        Assert.Equal("/tmp/raced.jpg", harness.Form.ThumbnailPath);
+    }
+
+    [Fact]
     public async Task NullScheduledTimes_PassThroughAsNull()
     {
         var harness = NewHarness();

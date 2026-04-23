@@ -28,6 +28,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         StreamFormViewModel streamForm,
         PresetActionsViewModel presetActions,
         ReferenceDataViewModel referenceData,
+        ThumbnailPickerViewModel thumbnailPicker,
         IServiceProvider services,
         ILogger<MainWindowViewModel> log)
     {
@@ -42,6 +43,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         StreamForm = streamForm;
         PresetActions = presetActions;
         ReferenceData = referenceData;
+        ThumbnailPicker = thumbnailPicker;
 
         // Dropdowns populate from cache first (no network), then a
         // background refresh pulls any staleness away — see slice 6.
@@ -80,6 +82,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public PresetActionsViewModel PresetActions { get; }
 
     public ReferenceDataViewModel ReferenceData { get; }
+
+    public ThumbnailPickerViewModel ThumbnailPicker { get; }
 
     [ObservableProperty]
     private bool _isFirstRun;
@@ -329,5 +333,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         ConnectAccount.Dispose();
         ReferenceData.Dispose();
+        ThumbnailPicker.Dispose();
     }
 }

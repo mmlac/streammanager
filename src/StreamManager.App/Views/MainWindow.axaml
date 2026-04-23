@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:StreamManager.App.ViewModels"
         xmlns:views="using:StreamManager.App.Views"
+        xmlns:local="using:StreamManager.App.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="900"
@@ -440,16 +441,51 @@
                         </Grid>
                     </StackPanel>
 
-                    <!-- Thumbnail -->
+                    <!-- Thumbnail (§6.8 + slice 8 picker). -->
                     <StackPanel Margin="{StaticResource SectionMargin}">
                         <TextBlock Classes="section" Text="Thumbnail"/>
                         <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                            <TextBlock Grid.Column="0" Classes="label" Text="Local path"/>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <TextBlock VerticalAlignment="Center"
-                                           Text="{Binding ThumbnailPath, FallbackValue='(none)', TargetNullValue='(none)'}"/>
-                                <TextBlock Opacity="0.5" VerticalAlignment="Center"
-                                           Text="(picker in slice 8)"/>
+                            <TextBlock Grid.Column="0" Classes="label" Text="Local image"
+                                       VerticalAlignment="Top"/>
+                            <StackPanel Grid.Column="1" Spacing="8"
+                                        DataContext="{Binding $parent[Window].DataContext.ThumbnailPicker}"
+                                        x:DataType="vm:ThumbnailPickerViewModel">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Pick image…"
+                                            Command="{Binding PickCommand}"/>
+                                    <Button Content="Clear"
+                                            Command="{Binding ClearCommand}"
+                                            IsEnabled="{Binding HasThumbnailPath}"/>
+                                </StackPanel>
+                                <!-- Reachable local preview: the absolute path bound
+                                     through the file→bitmap converter. -->
+                                <Border IsVisible="{Binding HasLocalPreview}"
+                                        BorderBrush="#333333"
+                                        BorderThickness="1"
+                                        Padding="4"
+                                        HorizontalAlignment="Left">
+                                    <Image Source="{Binding LocalPreviewPath,
+                                                     Converter={x:Static local:FilePathToBitmapConverter.Instance}}"
+                                           MaxWidth="240"
+                                           MaxHeight="135"
+                                           Stretch="Uniform"/>
+                                </Border>
+                                <!-- Unreachable placeholder: path text verbatim so the
+                                     user knows which drive to reconnect (§6.8). -->
+                                <Border IsVisible="{Binding ShowUnreachablePlaceholder}"
+                                        Background="#33a08020"
+                                        BorderBrush="#a08020"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="8,6">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="File not reachable (may be on a disconnected drive)"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding UnreachablePathText}"
+                                                   TextWrapping="Wrap"
+                                                   Opacity="0.8"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Grid>
                         <!-- Remote thumbnail from the active broadcast (§6.8 "remote URL, read-only"). -->

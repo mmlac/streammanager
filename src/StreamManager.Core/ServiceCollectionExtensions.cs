@@ -25,8 +25,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IYouTubeAuthenticator, YouTubeAuthenticator>();
         services.AddSingleton<IReauthOrchestrator, ReauthOrchestrator>();
         services.AddSingleton<IYouTubeClient, YouTubeClient>();
-        // Slice 5 stub — replaced with the real Google.Apis upload in slice 8.
-        services.AddSingleton<IThumbnailUploader, StubThumbnailUploader>();
+        services.AddSingleton<IThumbnailUploader, YouTubeThumbnailUploader>();
         services.AddSingleton<ICategoryProvider, CategoryProvider>();
         services.AddSingleton<ILanguageProvider, LanguageProvider>();
         return services;
