@@ -32,7 +32,7 @@ Status: **design agreed on scope**. Implementation plan pending.
 | Concern | Choice | Why |
 |---|---|---|
 | UI | Avalonia 11 | Cross-platform .NET UI, mature, XAML-like |
-| Runtime | .NET 9 | Current |
+| Runtime | .NET 10 | Current |
 | MVVM | CommunityToolkit.Mvvm | Source-generated, less ceremony than ReactiveUI |
 | YouTube API | `Google.Apis.YouTube.v3` | Official client for YouTube Data API v3 |
 | OAuth | `Google.Apis.Auth` (installed-app flow, PKCE, loopback redirect) | Standard for desktop Google apps |
@@ -169,7 +169,8 @@ When the user clicks **Apply to live stream**:
 
 ```
 <AppData>/streammanager/
-  presets.json         # all presets
+  config.json          # OAuth client ID + secret, log level, window geometry
+  presets.json         # all presets (with schemaVersion)
   thumbnails/          # app-managed copies, named <preset-id>.<ext>
   cache/
     categories.json    # videoCategories.list result, keyed by regionCode
@@ -200,7 +201,12 @@ action bar above it.
 │                                                            │
 │   Basics                                                   │
 │   ├ Title          [________________________________]      │
-│   ├ Description    [________________________________]      │
+│   ├ Description    ┌──────────────────────────────────┐    │
+│   │                │                                  │    │
+│   │                │  (multi-line text block,         │    │
+│   │                │   resizable, scrollable)         │    │
+│   │                │                                  │    │
+│   │                └──────────────────────────────────┘    │
 │   ├ Category       [Gaming ▾]                              │
 │   └ Tags           [chip, chip, chip, +]                   │
 │                                                            │
@@ -269,6 +275,27 @@ Each slice is a potential PR / bead.
 ## 11. Known risks / unknowns
 
 - **`thumbnails.set` scope.** Setting a thumbnail requires `youtube.upload` scope — noted in §4; means the consent screen will mention "upload videos" which may look scary. Document in README.
-- **Google Cloud OAuth client.** User must create a Google Cloud project + OAuth Desktop client ID on first setup (or we ship ours). For a personal tool, shipping the client ID in the repo is fine — PKCE protects the flow — but we should document this clearly.
 - **API field drift.** YouTube occasionally deprecates `contentDetails` fields (e.g., `enableLowLatency` is legacy in favor of `latencyPreference`). Store both, prefer `latencyPreference` on apply, log a warning if the API rejects a field so we notice.
 - **No transactional apply.** If `videos.update` succeeds but `thumbnails.set` fails, the broadcast is in a partially-updated state. Acceptable for v1; we surface which step failed so the user can retry.
+- **macOS Gatekeeper.** Unsigned binaries trigger a "cannot be opened" prompt. For v1 we document the `xattr -d com.apple.quarantine` workaround in the README; code-signing + notarization is out of scope.
+
+## 12. Open design decisions
+
+Flagged items still needing a call — not blocking the first slice, but worth settling before we harden things.
+
+1. **OAuth client ID provisioning.** Two options:
+   - **(a) Ship a client ID in-repo.** User just clicks Connect and signs in. PKCE protects the flow, so leaking the client ID is not a security issue. Downside: Google's verified-app limits apply to us (100-user test cap until verified; verification requires a privacy policy + homepage).
+   - **(b) User brings their own.** First-run wizard asks for a client ID (and optionally secret) from their own Google Cloud project. More setup, but no quota/verification ceiling, and each user owns their own consent screen.
+   - **Recommendation for v1:** (b) — it's a personal tool, the README will walk the user through creating one, and it sidesteps Google's verification requirements entirely.
+
+2. **Reauth on 401.** When a refresh token is revoked (user changes password, revokes app, etc.) the next API call returns 401. Should we: auto-prompt a re-connect flow, or just surface the error and let the user click Connect again? Default: surface + require explicit click — keeps UX predictable.
+
+3. **Refresh vs. dirty form.** §6.2 re-fetches from YouTube after Apply and on Refresh click. If the user has unsaved form edits and clicks Refresh, do we: (a) confirm-before-overwrite like §6.3, or (b) silently overwrite? Default: confirm, mirroring §6.3.
+
+4. **Orphaned thumbnail files.** If the user picks a thumbnail in the form but never saves as a preset, the copied file in `thumbnails/` is orphaned. Options: (a) defer the copy until Save-as-preset or Apply; (b) keep a registry + sweep orphans on startup. **Recommendation:** (a) — don't copy into `thumbnails/` until the file is committed to a preset or actually uploaded. Use a temp path in the meantime.
+
+5. **`presets.json` schema versioning.** Include a top-level `"schemaVersion": 1` so future migrations are sane. Cheap to add now, painful to retrofit.
+
+6. **Log level control.** Default Information; expose a Settings toggle for Debug. Log files rotate daily, keep last 7.
+
+7. **App icon + branding.** Out of scope for v1 beyond a placeholder. Tracked here so we don't forget before a public release.
