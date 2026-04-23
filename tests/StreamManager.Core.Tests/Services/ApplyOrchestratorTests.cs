@@ -359,6 +359,14 @@ public class ApplyOrchestratorTests
             if (ThrowOnUpdateVideo is not null) throw ThrowOnUpdateVideo;
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<VideoCategoryListItem>> ListVideoCategoriesAsync(
+            string regionCode, CancellationToken ct) =>
+            throw new NotSupportedException("Apply tests do not call ListVideoCategoriesAsync.");
+
+        public Task<IReadOnlyList<I18nLanguageListItem>> ListI18nLanguagesAsync(
+            CancellationToken ct) =>
+            throw new NotSupportedException("Apply tests do not call ListI18nLanguagesAsync.");
     }
 
     private sealed class FakeThumbnailUploader : IThumbnailUploader

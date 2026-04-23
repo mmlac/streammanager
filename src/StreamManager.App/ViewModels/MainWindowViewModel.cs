@@ -27,6 +27,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         ConnectAccountViewModel connectAccount,
         StreamFormViewModel streamForm,
         PresetActionsViewModel presetActions,
+        ReferenceDataViewModel referenceData,
         IServiceProvider services,
         ILogger<MainWindowViewModel> log)
     {
@@ -40,6 +41,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         ConnectAccount = connectAccount;
         StreamForm = streamForm;
         PresetActions = presetActions;
+        ReferenceData = referenceData;
+
+        // Dropdowns populate from cache first (no network), then a
+        // background refresh pulls any staleness away — see slice 6.
+        _ = Task.Run(async () =>
+        {
+            try { await ReferenceData.EnsureLoadedAsync(_disposed.Token); }
+            catch (OperationCanceledException) { /* shutdown */ }
+            catch (Exception ex) { _log.LogWarning(ex, "Reference data initial load failed"); }
+        });
 
         _config.Changed += OnConfigChanged;
         _authState.Changed += OnAuthStateChanged;
@@ -67,6 +78,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public StreamFormViewModel StreamForm { get; }
 
     public PresetActionsViewModel PresetActions { get; }
+
+    public ReferenceDataViewModel ReferenceData { get; }
 
     [ObservableProperty]
     private bool _isFirstRun;
@@ -315,5 +328,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             FirstRunViewModel.Saved -= OnFirstRunSaved;
         }
         ConnectAccount.Dispose();
+        ReferenceData.Dispose();
     }
 }

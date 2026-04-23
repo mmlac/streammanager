@@ -201,6 +201,14 @@ public class StreamFetchCoordinatorTests
 
         public Task UpdateVideoAsync(VideoUpdate update, CancellationToken ct) =>
             throw new NotSupportedException("Fetch tests' fake does not implement writes.");
+
+        public Task<IReadOnlyList<VideoCategoryListItem>> ListVideoCategoriesAsync(
+            string regionCode, CancellationToken ct) =>
+            throw new NotImplementedException();
+
+        public Task<IReadOnlyList<I18nLanguageListItem>> ListI18nLanguagesAsync(
+            CancellationToken ct) =>
+            throw new NotImplementedException();
     }
 
     private sealed class StubDirtyFormGuard : IDirtyFormGuard

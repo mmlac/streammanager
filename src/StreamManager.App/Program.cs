@@ -83,6 +83,7 @@ public static class Program
                 services.AddSingleton<ConnectAccountViewModel>();
                 services.AddSingleton<StreamFormViewModel>();
                 services.AddSingleton<PresetActionsViewModel>();
+                services.AddSingleton<ReferenceDataViewModel>();
                 services.AddSingleton<MainWindowViewModel>();
             });
 

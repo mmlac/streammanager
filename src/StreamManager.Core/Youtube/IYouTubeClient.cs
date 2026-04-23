@@ -17,4 +17,16 @@ public interface IYouTubeClient
 
     // §6.6 step 3 — push videos.update fields (categoryId, tags, languages).
     Task UpdateVideoAsync(VideoUpdate update, CancellationToken ct);
+
+    // Reference-data fetches for the Category + Language dropdowns (design
+    // §4 / slice 6). These are public data but the app's OAuth client does
+    // not carry an API key, so we sign the request with the active access
+    // token like every other call; providers only invoke them when the
+    // account is connected.
+    Task<IReadOnlyList<VideoCategoryListItem>> ListVideoCategoriesAsync(
+        string regionCode,
+        CancellationToken ct);
+
+    Task<IReadOnlyList<I18nLanguageListItem>> ListI18nLanguagesAsync(
+        CancellationToken ct);
 }

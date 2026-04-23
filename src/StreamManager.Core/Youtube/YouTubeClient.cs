@@ -172,6 +172,86 @@ public sealed class YouTubeClient : IYouTubeClient, IDisposable
         }
     }
 
+    public async Task<IReadOnlyList<VideoCategoryListItem>> ListVideoCategoriesAsync(
+        string regionCode,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(regionCode))
+        {
+            throw new ArgumentException("regionCode is required.", nameof(regionCode));
+        }
+
+        var token = RequireAccessToken();
+
+        try
+        {
+            var req = _service.VideoCategories.List("snippet");
+            req.RegionCode = regionCode;
+            req.OauthToken = token;
+
+            var resp = await req.ExecuteAsync(ct).ConfigureAwait(false);
+            var items = resp?.Items ?? new List<Google.Apis.YouTube.v3.Data.VideoCategory>();
+
+            var mapped = new List<VideoCategoryListItem>(items.Count);
+            foreach (var item in items)
+            {
+                mapped.Add(new VideoCategoryListItem
+                {
+                    Id = item.Id ?? "",
+                    Kind = item.Kind,
+                    Etag = item.ETag,
+                    Snippet = item.Snippet is null ? null : new VideoCategorySnippetDto
+                    {
+                        ChannelId = item.Snippet.ChannelId,
+                        Title = item.Snippet.Title ?? "",
+                        Assignable = item.Snippet.Assignable ?? false,
+                    },
+                });
+            }
+            return mapped;
+        }
+        catch (Google.GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new UnauthorizedException("YouTube API returned 401.", ex);
+        }
+    }
+
+    public async Task<IReadOnlyList<I18nLanguageListItem>> ListI18nLanguagesAsync(
+        CancellationToken ct)
+    {
+        var token = RequireAccessToken();
+
+        try
+        {
+            var req = _service.I18nLanguages.List("snippet");
+            req.OauthToken = token;
+
+            var resp = await req.ExecuteAsync(ct).ConfigureAwait(false);
+            var items = resp?.Items ?? new List<Google.Apis.YouTube.v3.Data.I18nLanguage>();
+
+            var mapped = new List<I18nLanguageListItem>(items.Count);
+            foreach (var item in items)
+            {
+                mapped.Add(new I18nLanguageListItem
+                {
+                    Id = item.Id ?? "",
+                    Kind = item.Kind,
+                    Etag = item.ETag,
+                    Snippet = item.Snippet is null ? null : new I18nLanguageSnippetDto
+                    {
+                        Hl = item.Snippet.Hl ?? "",
+                        Name = item.Snippet.Name ?? "",
+                    },
+                });
+            }
+            return mapped;
+        }
+        catch (Google.GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new UnauthorizedException("YouTube API returned 401.", ex);
+        }
+    }
+
     private string RequireAccessToken()
     {
         var token = _authState.AccessToken;
