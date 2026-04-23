@@ -8,7 +8,8 @@
         x:Class="StreamManager.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Width="900" Height="900"
-        Title="StreamManager">
+        Title="StreamManager"
+        Icon="/Assets/streammanager.png">
 
     <Window.Resources>
         <Thickness x:Key="SectionMargin">0,0,0,16</Thickness>

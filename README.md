@@ -62,6 +62,24 @@ dotnet run --project src/StreamManager.App
 
 Requires the .NET 10 SDK.
 
+To build the distributable binaries yourself (self-contained, single-file,
+iconned for each platform), bump `VERSION` if you want and run:
+
+```sh
+# macOS / Linux
+scripts/publish.sh --verify
+
+# Windows (PowerShell 7+)
+pwsh scripts/publish.ps1 -Verify
+```
+
+Artifacts land in `artifacts/<rid>/` — `StreamManager.exe` for `win-x64`,
+`StreamManager.app/` for the `osx-arm64` / `osx-x64` runtimes. The scripts
+generate the app icon from `streammanager.png`, stamp the `VERSION` file
+into the exe properties and the `.app` `Info.plist`, and with `--verify`
+sanity-check the output (no stray `config.json` / `*.log`, Info.plist
+version matches, PE32 magic on the Windows binary).
+
 ## First-run setup
 
 StreamManager needs a Google Cloud OAuth client to talk to YouTube on your

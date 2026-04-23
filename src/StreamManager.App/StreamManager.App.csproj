@@ -5,11 +5,49 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>StreamManager</AssemblyName>
     <RootNamespace>StreamManager.App</RootNamespace>
+    <AssemblyTitle>StreamManager</AssemblyTitle>
+    <Description>StreamManager — YouTube Live preset manager (desktop).</Description>
   </PropertyGroup>
 
+  <!--
+    Publish defaults for distributable artifacts. PublishSingleFile requires
+    IncludeNativeLibrariesForSelfExtract for Avalonia to find its native deps;
+    without it the app fails to start on macOS. Trimming is off because XAML
+    loaders use reflection that the linker can't see.
+  -->
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <!--
+      Keep NuGet-package-provided PDBs + XML docs out of the publish output.
+      SkiaSharp and HarfBuzzSharp ship ~100MB of native-lib PDBs we don't want
+      shipped to end users.
+    -->
+    <CopyDebugSymbolFilesFromPackages>false</CopyDebugSymbolFilesFromPackages>
+    <CopyDocumentationFilesFromPackages>false</CopyDocumentationFilesFromPackages>
+  </PropertyGroup>
+
+  <!--
+    streammanager.png at the repo root is the single source of truth for the
+    app icon (see docs/design.md §11). Linked (not copied) so there's one file.
+    The generated .ico lives under build/icons/ and is produced by
+    build/IconGen/ before publish; ApplicationIcon is set only when that file
+    actually exists so plain `dotnet build` during dev doesn't fail.
+  -->
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="..\..\streammanager.png" Link="Assets\streammanager.png" Visible="false" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <StreamManagerIconIco>$(MSBuildThisFileDirectory)..\..\build\icons\streammanager.ico</StreamManagerIconIco>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(StreamManagerIconIco)')">
+    <ApplicationIcon>$(StreamManagerIconIco)</ApplicationIcon>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.1" />

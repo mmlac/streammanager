@@ -6,5 +6,38 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NU1903</WarningsNotAsErrors>
+    <!--
+      Embed portable PDBs into each assembly so `dotnet publish` doesn't leak
+      a tree of standalone .pdb files into artifacts/. The App project adds
+      IncludeNativeLibrariesForSelfExtract, which then produces a single .exe.
+    -->
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <!--
+    Version is read from the VERSION file at the repo root so both CI scripts
+    and published artifacts (Windows .exe properties, macOS Info.plist) stay in
+    lock-step with one source of truth. Bump VERSION → re-publish → done.
+  -->
+  <PropertyGroup>
+    <StreamManagerVersionFile>$(MSBuildThisFileDirectory)VERSION</StreamManagerVersionFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(StreamManagerVersionFile)')">
+    <StreamManagerVersion>$([System.IO.File]::ReadAllText('$(StreamManagerVersionFile)').Trim())</StreamManagerVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(StreamManagerVersion)' == ''">
+    <StreamManagerVersion>0.0.0</StreamManagerVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version>$(StreamManagerVersion)</Version>
+    <!-- AssemblyVersion and FileVersion must be 4-part numeric -->
+    <AssemblyVersion>$(StreamManagerVersion).0</AssemblyVersion>
+    <FileVersion>$(StreamManagerVersion).0</FileVersion>
+    <InformationalVersion>$(StreamManagerVersion)</InformationalVersion>
+
+    <Company>StreamManager</Company>
+    <Product>StreamManager</Product>
+    <Copyright>Copyright © StreamManager contributors</Copyright>
   </PropertyGroup>
 </Project>
