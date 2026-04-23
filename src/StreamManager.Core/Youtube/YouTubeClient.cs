@@ -2,6 +2,7 @@ using System.Net;
 using Google.Apis.Services;
 using Google.Apis.Util;
 using Google.Apis.YouTube.v3;
+using Google.Apis.YouTube.v3.Data;
 using Microsoft.Extensions.Logging;
 using StreamManager.Core.Auth;
 
@@ -69,6 +70,101 @@ public sealed class YouTubeClient : IYouTubeClient, IDisposable
             }
 
             return BroadcastSnapshotMapper.Map(broadcast, video);
+        }
+        catch (Google.GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new UnauthorizedException("YouTube API returned 401.", ex);
+        }
+    }
+
+    public async Task UpdateBroadcastAsync(BroadcastUpdate update, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        var token = RequireAccessToken();
+
+        var resource = new LiveBroadcast
+        {
+            Id = update.BroadcastId,
+            Snippet = new LiveBroadcastSnippet
+            {
+                Title = update.Title,
+                Description = update.Description,
+                ScheduledStartTimeDateTimeOffset = update.ScheduledStartTime,
+                ScheduledEndTimeDateTimeOffset = update.ScheduledEndTime,
+            },
+            Status = new LiveBroadcastStatus
+            {
+                PrivacyStatus = update.PrivacyStatus,
+                SelfDeclaredMadeForKids = update.SelfDeclaredMadeForKids,
+            },
+            ContentDetails = new LiveBroadcastContentDetails
+            {
+                EnableAutoStart = update.EnableAutoStart,
+                EnableAutoStop = update.EnableAutoStop,
+                EnableClosedCaptions = update.EnableClosedCaptions,
+                EnableDvr = update.EnableDvr,
+                EnableEmbed = update.EnableEmbed,
+                RecordFromStart = update.RecordFromStart,
+                StartWithSlate = update.StartWithSlate,
+                EnableContentEncryption = update.EnableContentEncryption,
+                EnableLowLatency = update.EnableLowLatency,
+                LatencyPreference = update.LatencyPreference,
+                Projection = update.Projection,
+                StereoLayout = update.StereoLayout,
+                ClosedCaptionsType = update.ClosedCaptionsType,
+                MonitorStream = new MonitorStreamInfo
+                {
+                    EnableMonitorStream = update.EnableMonitorStream,
+                    BroadcastStreamDelayMs = update.BroadcastStreamDelayMs,
+                },
+            },
+        };
+
+        try
+        {
+            var req = _service.LiveBroadcasts.Update(
+                resource,
+                new Repeatable<string>(new[] { "snippet", "status", "contentDetails" }));
+            req.OauthToken = token;
+            await req.ExecuteAsync(ct).ConfigureAwait(false);
+        }
+        catch (Google.GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new UnauthorizedException("YouTube API returned 401.", ex);
+        }
+    }
+
+    public async Task UpdateVideoAsync(VideoUpdate update, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        var token = RequireAccessToken();
+
+        var resource = new Video
+        {
+            Id = update.VideoId,
+            Snippet = new VideoSnippet
+            {
+                // CategoryId is required on a Video.snippet write — keep it as
+                // whatever the form holds (mapper falls back to last-fetched
+                // value if user didn't change it).
+                CategoryId = update.CategoryId,
+                Tags = update.Tags.ToList(),
+                DefaultLanguage = update.DefaultLanguage,
+                DefaultAudioLanguage = update.DefaultAudioLanguage,
+                // Title is required on a snippet write — kept in sync with
+                // the broadcast title (the orchestrator pulls it from the
+                // same form field).
+                Title = update.Title,
+            },
+        };
+
+        try
+        {
+            var req = _service.Videos.Update(
+                resource,
+                new Repeatable<string>(new[] { "snippet" }));
+            req.OauthToken = token;
+            await req.ExecuteAsync(ct).ConfigureAwait(false);
         }
         catch (Google.GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.Unauthorized)
         {

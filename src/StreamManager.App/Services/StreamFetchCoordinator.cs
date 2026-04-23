@@ -101,7 +101,7 @@ public sealed class StreamFetchCoordinator : IStreamFetchCoordinator
                 LiveIndicatorStatus.NotLive);
         }
 
-        _form.SetLiveBaseline(ToFormSnapshot(snapshot));
+        _form.SetLiveBaseline(ToFormSnapshot(snapshot), snapshot.BroadcastId, snapshot.VideoId);
         _form.HasLiveBroadcast = true;
         _form.RemoteThumbnailUrl = snapshot.ThumbnailUrl;
 

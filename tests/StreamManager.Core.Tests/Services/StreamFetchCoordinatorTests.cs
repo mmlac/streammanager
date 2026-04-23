@@ -192,6 +192,15 @@ public class StreamFetchCoordinatorTests
             if (Throw is not null) throw Throw;
             return Task.FromResult(Response);
         }
+
+        // Slice 5 added write methods to IYouTubeClient. The fetch
+        // coordinator never calls them; throwing keeps accidental calls
+        // loud instead of silently passing.
+        public Task UpdateBroadcastAsync(BroadcastUpdate update, CancellationToken ct) =>
+            throw new NotSupportedException("Fetch tests' fake does not implement writes.");
+
+        public Task UpdateVideoAsync(VideoUpdate update, CancellationToken ct) =>
+            throw new NotSupportedException("Fetch tests' fake does not implement writes.");
     }
 
     private sealed class StubDirtyFormGuard : IDirtyFormGuard

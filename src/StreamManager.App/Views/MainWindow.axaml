@@ -139,14 +139,39 @@
 
             <!-- Bottom bar: status + Apply -->
             <Border DockPanel.Dock="Bottom" Padding="12,8" Background="#11000000">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Grid.Column="0"
-                               Text="{Binding StreamForm.DirtyStatusLine}"
-                               VerticalAlignment="Center"/>
-                    <Button Grid.Column="1"
-                            Content="Apply to live stream ▶"
-                            IsEnabled="{Binding StreamForm.CanApply}"/>
-                </Grid>
+                <StackPanel Spacing="6">
+                    <!-- Error card surfaced on Apply failure (§6.6 step 6).
+                         Non-dismissible per design — stays until next Apply
+                         clears it. The card spans the full width so a long
+                         message wraps cleanly. -->
+                    <Border IsVisible="{Binding ApplyErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            Background="#33d04040"
+                            BorderBrush="#d04040"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="10,6">
+                        <TextBlock Text="{Binding ApplyErrorMessage}"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding StreamForm.DirtyStatusLine}"
+                                   VerticalAlignment="Center"/>
+                        <!-- Step label + spinner only visible while the
+                             orchestrator is running. -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                    Margin="0,0,12,0" VerticalAlignment="Center"
+                                    IsVisible="{Binding IsApplying}">
+                            <ProgressBar IsIndeterminate="True" Width="80" Height="6"/>
+                            <TextBlock Text="{Binding ApplyStepLabel}" Opacity="0.8"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Grid.Column="2"
+                                Content="Apply to live stream ▶"
+                                Command="{Binding ApplyCommand}"
+                                IsEnabled="{Binding CanApply}"/>
+                    </Grid>
+                </StackPanel>
             </Border>
 
             <ScrollViewer>

@@ -168,6 +168,17 @@ public partial class StreamFormViewModel : ObservableValidator
     [ObservableProperty]
     private string? _remoteThumbnailUrl;
 
+    // ---- Identifiers from the last successful fetch. ----
+    // ApplyOrchestrator (§6.6) needs both to address liveBroadcasts.update
+    // (broadcast resource) and videos.update (video resource). They are not
+    // user-editable form fields, so they're held separately from the snapshot.
+    // Cleared when no broadcast is active so a stale ID can't be used after
+    // a Disconnect / NotLive transition.
+
+    public string? LastFetchedBroadcastId { get; private set; }
+
+    public string? LastFetchedVideoId { get; private set; }
+
     // ---- Dropdown option sources ----
 
     public IReadOnlyList<string> PrivacyStatusOptions => StreamFormEnums.PrivacyStatuses.All;
@@ -259,13 +270,32 @@ public partial class StreamFormViewModel : ObservableValidator
 
     public void SetLiveBaseline(StreamFormSnapshot? snapshot)
     {
+        SetLiveBaseline(snapshot, broadcastId: null, videoId: null);
+    }
+
+    // Slice 5: the orchestrator needs the broadcast/video IDs from the same
+    // fetch that produced the form snapshot, so SetLiveBaseline takes them
+    // alongside. The fetch coordinator passes them in; preset / test paths
+    // that only have form data fall through to the no-id overload above.
+    public void SetLiveBaseline(StreamFormSnapshot? snapshot, string? broadcastId, string? videoId)
+    {
         _liveBaseline = snapshot;
+        LastFetchedBroadcastId = broadcastId;
+        LastFetchedVideoId = videoId;
         if (snapshot is not null)
         {
             ApplySnapshotToForm(snapshot);
         }
         RecomputeDirty();
     }
+
+    // §6.6 step 4 — the thumbnails.set call fires only when the form's
+    // thumbnailPath has been changed since the last fetch. The baseline's
+    // ThumbnailPath is always null after a fetch (the API returns a remote
+    // URL, not a local file), so any non-null current path counts as
+    // "changed". Kept here so callers don't need to peek at _liveBaseline.
+    public bool IsThumbnailChangedFromLive =>
+        !string.Equals(ThumbnailPath, _liveBaseline?.ThumbnailPath, StringComparison.Ordinal);
 
     public void SetPresetBaseline(StreamFormSnapshot snapshot, PresetLineage lineage)
     {

@@ -67,6 +67,9 @@ public static class Program
                 services.AddSingleton<IConfirmOverwritePrompt, UiConfirmOverwritePrompt>();
                 services.AddSingleton<IDirtyFormGuard, StreamFormDirtyFormGuard>();
                 services.AddSingleton<IStreamFetchCoordinator, StreamFetchCoordinator>();
+                services.AddSingleton<IUnreachableThumbnailPrompt, UiUnreachableThumbnailPrompt>();
+                services.AddSingleton<IThumbnailFileChecker, FileSystemThumbnailChecker>();
+                services.AddSingleton<IApplyOrchestrator, ApplyOrchestrator>();
                 services.AddSingleton<Presets.IPresetDialogs, Presets.AvaloniaPresetDialogs>();
                 services.AddSingleton<TimeProvider>(TimeProvider.System);
                 services.AddSingleton(sp =>

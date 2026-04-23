@@ -13,6 +13,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly IYouTubeAuthenticator _authenticator;
     private readonly IAuthState _authState;
     private readonly IStreamFetchCoordinator _fetchCoordinator;
+    private readonly IApplyOrchestrator _applyOrchestrator;
     private readonly IServiceProvider _services;
     private readonly ILogger<MainWindowViewModel> _log;
     private readonly CancellationTokenSource _disposed = new();
@@ -22,6 +23,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         IYouTubeAuthenticator authenticator,
         IAuthState authState,
         IStreamFetchCoordinator fetchCoordinator,
+        IApplyOrchestrator applyOrchestrator,
         ConnectAccountViewModel connectAccount,
         StreamFormViewModel streamForm,
         PresetActionsViewModel presetActions,
@@ -32,6 +34,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _authenticator = authenticator;
         _authState = authState;
         _fetchCoordinator = fetchCoordinator;
+        _applyOrchestrator = applyOrchestrator;
         _services = services;
         _log = log;
         ConnectAccount = connectAccount;
@@ -40,6 +43,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
         _config.Changed += OnConfigChanged;
         _authState.Changed += OnAuthStateChanged;
+        // Apply enablement is keyed off StreamForm.CanApply, so propagate
+        // its changes to the bound RelayCommand's CanExecute.
+        StreamForm.PropertyChanged += OnStreamFormPropertyChanged;
         SyncFromAuthState();
         Refresh();
 
@@ -77,7 +83,34 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isFetching;
 
+    // Apply pipeline state — surfaced by MainWindow.axaml so the button can
+    // show a spinner with the current step label while running, and an
+    // error card after a failed step (§6.6 step 6).
+    [ObservableProperty]
+    private bool _isApplying;
+
+    [ObservableProperty]
+    private ApplyStep _applyStep = ApplyStep.None;
+
+    [ObservableProperty]
+    private string? _applyErrorMessage;
+
+    [ObservableProperty]
+    private string? _applyStatusMessage;
+
     public bool CanRefresh => _authState.IsConnected && !IsFetching;
+
+    public bool CanApply => StreamForm.CanApply && !IsApplying && !IsFetching;
+
+    public string ApplyStepLabel => ApplyStep switch
+    {
+        ApplyStep.PreflightThumbnail => "Checking thumbnail…",
+        ApplyStep.UpdateBroadcast => "Updating broadcast…",
+        ApplyStep.UpdateVideo => "Updating video…",
+        ApplyStep.UpdateThumbnail => "Uploading thumbnail…",
+        ApplyStep.RefetchAfterApply => "Re-fetching…",
+        _ => "Applying…",
+    };
 
     // Derived indicator flags consumed by MainWindow.axaml for the top-bar dot.
     public bool IsLiveIndicatorLive => LiveIndicator == LiveIndicatorStatus.Live;
@@ -106,10 +139,42 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         await RunFetchAsync(allowOverwrite: false, ct).ConfigureAwait(false);
     }
 
-    // Slice 5 will call this after a successful Apply so the dirty-form
-    // confirmation is skipped (the user just pushed the edits).
+    // Re-fetch with the dirty-form prompt suppressed. Called by the Apply
+    // orchestrator (§6.6 step 5) but kept here so view-driven callers can
+    // reuse it consistently with the fetch state surface.
     public Task<StreamFetchResult> FetchAfterApplyAsync(CancellationToken ct) =>
         RunFetchAsync(allowOverwrite: true, ct);
+
+    [RelayCommand(CanExecute = nameof(CanApply))]
+    private async Task ApplyAsync(CancellationToken ct)
+    {
+        IsApplying = true;
+        ApplyErrorMessage = null;
+        ApplyStatusMessage = null;
+        ApplyStep = ApplyStep.UpdateBroadcast;
+        try
+        {
+            var result = await _applyOrchestrator.ApplyAsync(ct).ConfigureAwait(false);
+            ApplyStep = result.FailedStep;
+            switch (result.Outcome)
+            {
+                case ApplyOutcome.Success:
+                    ApplyStatusMessage = "Applied to YouTube.";
+                    break;
+                case ApplyOutcome.Cancelled:
+                    ApplyStatusMessage = result.ErrorMessage ?? "Cancelled.";
+                    break;
+                case ApplyOutcome.Failed:
+                    ApplyErrorMessage = result.ErrorMessage ?? "Apply failed.";
+                    break;
+            }
+        }
+        finally
+        {
+            IsApplying = false;
+            ApplyStep = ApplyStep.None;
+        }
+    }
 
     private async Task<StreamFetchResult> RunFetchAsync(bool allowOverwrite, CancellationToken ct)
     {
@@ -149,8 +214,30 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         FetchErrorMessage = result.ErrorMessage;
     }
 
-    partial void OnIsFetchingChanged(bool value) =>
+    partial void OnIsFetchingChanged(bool value)
+    {
         RefreshCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanApply));
+        ApplyCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsApplyingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanApply));
+        ApplyCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnApplyStepChanged(ApplyStep value) =>
+        OnPropertyChanged(nameof(ApplyStepLabel));
+
+    private void OnStreamFormPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(StreamFormViewModel.CanApply))
+        {
+            OnPropertyChanged(nameof(CanApply));
+            ApplyCommand.NotifyCanExecuteChanged();
+        }
+    }
 
     private void Refresh()
     {
@@ -222,6 +309,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _disposed.Dispose();
         _config.Changed -= OnConfigChanged;
         _authState.Changed -= OnAuthStateChanged;
+        StreamForm.PropertyChanged -= OnStreamFormPropertyChanged;
         if (FirstRunViewModel is not null)
         {
             FirstRunViewModel.Saved -= OnFirstRunSaved;
