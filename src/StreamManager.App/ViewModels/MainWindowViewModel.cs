@@ -18,6 +18,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         IYouTubeAuthenticator authenticator,
         ConnectAccountViewModel connectAccount,
         StreamFormViewModel streamForm,
+        PresetActionsViewModel presetActions,
         IServiceProvider services,
         ILogger<MainWindowViewModel> log)
     {
@@ -27,6 +28,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _log = log;
         ConnectAccount = connectAccount;
         StreamForm = streamForm;
+        PresetActions = presetActions;
 
         _config.Changed += OnConfigChanged;
         Refresh();
@@ -44,6 +46,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public ConnectAccountViewModel ConnectAccount { get; }
 
     public StreamFormViewModel StreamForm { get; }
+
+    public PresetActionsViewModel PresetActions { get; }
 
     [ObservableProperty]
     private bool _isFirstRun;
