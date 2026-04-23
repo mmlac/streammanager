@@ -34,6 +34,21 @@
             <Setter Property="Padding" Value="8,2" />
             <Setter Property="Margin" Value="0,0,4,4" />
         </Style>
+        <!-- Live indicator dot colours per design.md §8. -->
+        <Style Selector="Ellipse.live-dot">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="Fill" Value="#888888" />
+        </Style>
+        <Style Selector="Ellipse.live-dot.live">
+            <Setter Property="Fill" Value="#2ecc71" />
+        </Style>
+        <Style Selector="Ellipse.live-dot.notlive">
+            <Setter Property="Fill" Value="#888888" />
+        </Style>
+        <Style Selector="Ellipse.live-dot.failed">
+            <Setter Property="Fill" Value="#e0a020" />
+        </Style>
     </Window.Styles>
 
     <Window.DataTemplates>
@@ -51,11 +66,26 @@
         <DockPanel IsVisible="{Binding !IsFirstRun}">
             <!-- Top bar -->
             <Border DockPanel.Dock="Top" Padding="12,8" Background="#11000000">
-                <Grid ColumnDefinitions="Auto,*,Auto">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
                     <TextBlock Grid.Column="0" Text="StreamManager" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <views:ConnectAccountView Grid.Column="1" Margin="16,0"
+
+                    <!-- Live indicator (green / grey / amber per §8). -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                Margin="12,0,0,0" VerticalAlignment="Center"
+                                ToolTip.Tip="{Binding FetchErrorMessage}">
+                        <Ellipse Classes="live-dot"
+                                 Classes.live="{Binding IsLiveIndicatorLive}"
+                                 Classes.notlive="{Binding IsLiveIndicatorNotLive}"
+                                 Classes.failed="{Binding IsLiveIndicatorFailed}"/>
+                        <TextBlock Text="{Binding LiveIndicatorText}" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <views:ConnectAccountView Grid.Column="2" Margin="16,0"
                                               DataContext="{Binding ConnectAccount}"/>
-                    <Button Grid.Column="2" Content="⚙ Settings" IsEnabled="False"/>
+
+                    <Button Grid.Column="3" Content="Refresh" Margin="0,0,8,0"
+                            Command="{Binding RefreshCommand}"/>
+                    <Button Grid.Column="4" Content="⚙ Settings" IsEnabled="False"/>
                 </Grid>
             </Border>
 
@@ -297,13 +327,20 @@
                     <StackPanel Margin="{StaticResource SectionMargin}">
                         <TextBlock Classes="section" Text="Thumbnail"/>
                         <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
-                            <TextBlock Grid.Column="0" Classes="label" Text="Path"/>
+                            <TextBlock Grid.Column="0" Classes="label" Text="Local path"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                 <TextBlock VerticalAlignment="Center"
                                            Text="{Binding ThumbnailPath, FallbackValue='(none)', TargetNullValue='(none)'}"/>
                                 <TextBlock Opacity="0.5" VerticalAlignment="Center"
                                            Text="(picker in slice 8)"/>
                             </StackPanel>
+                        </Grid>
+                        <!-- Remote thumbnail from the active broadcast (§6.8 "remote URL, read-only"). -->
+                        <Grid ColumnDefinitions="140,*" Margin="{StaticResource FieldMargin}">
+                            <TextBlock Grid.Column="0" Classes="label" Text="Live preview URL"/>
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                       Text="{Binding RemoteThumbnailUrl, FallbackValue='(no active broadcast)', TargetNullValue='(no active broadcast)'}"/>
                         </Grid>
                     </StackPanel>
 

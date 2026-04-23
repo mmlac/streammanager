@@ -12,9 +12,9 @@ namespace StreamManager.App.Auth;
 // boolean result back to the orchestrator.
 public sealed class UiReauthPrompt : IReauthPrompt
 {
-    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
+    private readonly Lazy<IClassicDesktopStyleApplicationLifetime> _desktop;
 
-    public UiReauthPrompt(IClassicDesktopStyleApplicationLifetime desktop)
+    public UiReauthPrompt(Lazy<IClassicDesktopStyleApplicationLifetime> desktop)
     {
         _desktop = desktop;
     }
@@ -26,7 +26,7 @@ public sealed class UiReauthPrompt : IReauthPrompt
             var vm = new ReauthModalViewModel();
             var window = new ReauthModalWindow(vm);
 
-            var owner = _desktop.MainWindow;
+            var owner = _desktop.Value.MainWindow;
             if (owner is not null)
             {
                 await window.ShowDialog(owner);

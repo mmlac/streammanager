@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using StreamManager.App.Auth;
+using StreamManager.App.Services;
 using StreamManager.App.ViewModels;
 using StreamManager.Core;
 using StreamManager.Core.Auth;
@@ -63,11 +64,18 @@ public static class Program
                 services.AddStreamManagerCore();
                 RegisterPlatformTokenStore(services);
                 services.AddSingleton<IReauthPrompt, UiReauthPrompt>();
-                services.AddSingleton<IDirtyFormGuard, PassthroughDirtyFormGuard>();
+                services.AddSingleton<IConfirmOverwritePrompt, UiConfirmOverwritePrompt>();
+                services.AddSingleton<IDirtyFormGuard, StreamFormDirtyFormGuard>();
+                services.AddSingleton<IStreamFetchCoordinator, StreamFetchCoordinator>();
                 services.AddSingleton<Presets.IPresetDialogs, Presets.AvaloniaPresetDialogs>();
                 services.AddSingleton<TimeProvider>(TimeProvider.System);
                 services.AddSingleton(sp =>
                     (IClassicDesktopStyleApplicationLifetime)Avalonia.Application.Current!.ApplicationLifetime!);
+                // Lazy variant for consumers (reauth prompt, confirm-overwrite
+                // prompt) that need to stay constructible in test hosts where
+                // Avalonia.Application.Current is null.
+                services.AddSingleton(sp => new Lazy<IClassicDesktopStyleApplicationLifetime>(
+                    () => (IClassicDesktopStyleApplicationLifetime)Avalonia.Application.Current!.ApplicationLifetime!));
                 services.AddTransient<FirstRunSetupViewModel>();
                 services.AddSingleton<ConnectAccountViewModel>();
                 services.AddSingleton<StreamFormViewModel>();

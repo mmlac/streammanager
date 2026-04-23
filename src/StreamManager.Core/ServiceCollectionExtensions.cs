@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using StreamManager.Core.Auth;
 using StreamManager.Core.Presets;
+using StreamManager.Core.Youtube;
 
 namespace StreamManager.Core;
 
@@ -22,6 +23,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IYouTubeAuthenticator, YouTubeAuthenticator>();
         services.AddSingleton<IReauthOrchestrator, ReauthOrchestrator>();
+        services.AddSingleton<IYouTubeClient, YouTubeClient>();
         return services;
     }
 }

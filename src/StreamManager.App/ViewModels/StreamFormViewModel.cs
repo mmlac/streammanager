@@ -130,10 +130,43 @@ public partial class StreamFormViewModel : ObservableValidator
 
     [ObservableProperty] private string? _thumbnailPath;
 
-    // ---- Stubbed connection state (filled in by later slices) ----
+    // ---- Connection / live-broadcast state ----
+    // IsConnected is driven by IAuthState (set by MainWindowViewModel on auth
+    // events). HasLiveBroadcast is driven by IStreamFetchCoordinator after a
+    // fetch (§6.2). Both feed CanApply.
 
-    public bool IsConnected => false;
-    public bool HasLiveBroadcast => false;
+    private bool _isConnected;
+    public bool IsConnected
+    {
+        get => _isConnected;
+        set
+        {
+            if (SetProperty(ref _isConnected, value))
+            {
+                OnPropertyChanged(nameof(CanApply));
+            }
+        }
+    }
+
+    private bool _hasLiveBroadcast;
+    public bool HasLiveBroadcast
+    {
+        get => _hasLiveBroadcast;
+        set
+        {
+            if (SetProperty(ref _hasLiveBroadcast, value))
+            {
+                OnPropertyChanged(nameof(CanApply));
+            }
+        }
+    }
+
+    // ---- Remote thumbnail URL (read-only preview from the active broadcast). ----
+    // Distinct from ThumbnailPath, which is a locally-picked file (slice 8).
+    // Cleared when no broadcast is active.
+
+    [ObservableProperty]
+    private string? _remoteThumbnailUrl;
 
     // ---- Dropdown option sources ----
 
@@ -356,7 +389,10 @@ public partial class StreamFormViewModel : ObservableValidator
         nameof(CanApply) or
         nameof(DirtyStatusLine) or
         nameof(PresetLineage) or
-        nameof(PendingTagInput);
+        nameof(PendingTagInput) or
+        nameof(IsConnected) or
+        nameof(HasLiveBroadcast) or
+        nameof(RemoteThumbnailUrl);
 
     partial void OnTitleChanged(string value) => OnValidatablePropertyChanged();
     partial void OnDescriptionChanged(string value) => OnValidatablePropertyChanged();
