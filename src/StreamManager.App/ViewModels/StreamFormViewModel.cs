@@ -252,6 +252,28 @@ public partial class StreamFormViewModel : ObservableValidator
         RecomputeDirty();
     }
 
+    // Used by "Save as preset…" — the form already holds the values being
+    // saved, so don't re-apply the snapshot (which would fire property
+    // change notifications and confuse any bound UI). Just adopt the
+    // current values as the new preset baseline and set lineage.
+    public void SetPresetBaselineFromCurrent(PresetLineage lineage)
+    {
+        ArgumentNullException.ThrowIfNull(lineage);
+        _presetBaseline = CaptureSnapshot();
+        PresetLineage = lineage;
+        RecomputeDirty();
+    }
+
+    // Used by "Update preset 'X'" — overwrite the preset baseline with
+    // the current form state so dirty-vs-preset resets to clean while
+    // lineage stays intact.
+    public void RebaselineCurrentPreset()
+    {
+        if (_presetLineage is null) return;
+        _presetBaseline = CaptureSnapshot();
+        RecomputeDirty();
+    }
+
     public StreamFormSnapshot CaptureSnapshot() => new()
     {
         Title = Title,

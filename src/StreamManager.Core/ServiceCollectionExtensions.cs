@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using StreamManager.Core.Auth;
+using StreamManager.Core.Presets;
 
 namespace StreamManager.Core;
 
@@ -11,6 +12,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOAuthClientConfig, OAuthClientConfig>();
         services.AddSingleton<IBrowserLauncher, SystemBrowserLauncher>();
         services.AddSingleton<IAuthState, AuthState>();
+        services.AddSingleton<IPresetStore, PresetStore>();
 
         // HttpClient instances for the OAuth flow + userinfo. Keep them as
         // typed clients so retries/handlers can be wired in later without

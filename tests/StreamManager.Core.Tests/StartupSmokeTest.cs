@@ -2,8 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using StreamManager.App;
+using StreamManager.App.Presets;
 using StreamManager.App.ViewModels;
 using StreamManager.Core;
+using StreamManager.Core.Tests.Presets;
 using Xunit;
 
 namespace StreamManager.Core.Tests;
@@ -49,6 +51,10 @@ public class StartupSmokeTest
                 // Replace the default IAppPaths so tests write under a temp
                 // directory instead of the user's real app-data.
                 services.AddSingleton<IAppPaths>(new AppPaths(appDataRoot));
+                // Replace the Avalonia-backed preset dialogs so we don't
+                // resolve IClassicDesktopStyleApplicationLifetime (which
+                // requires a running Avalonia Application instance).
+                services.AddSingleton<IPresetDialogs, FakePresetDialogs>();
             })
             .Build();
 

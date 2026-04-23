@@ -64,11 +64,14 @@ public static class Program
                 RegisterPlatformTokenStore(services);
                 services.AddSingleton<IReauthPrompt, UiReauthPrompt>();
                 services.AddSingleton<IDirtyFormGuard, PassthroughDirtyFormGuard>();
+                services.AddSingleton<Presets.IPresetDialogs, Presets.AvaloniaPresetDialogs>();
+                services.AddSingleton<TimeProvider>(TimeProvider.System);
                 services.AddSingleton(sp =>
                     (IClassicDesktopStyleApplicationLifetime)Avalonia.Application.Current!.ApplicationLifetime!);
                 services.AddTransient<FirstRunSetupViewModel>();
                 services.AddSingleton<ConnectAccountViewModel>();
                 services.AddSingleton<StreamFormViewModel>();
+                services.AddSingleton<PresetActionsViewModel>();
                 services.AddSingleton<MainWindowViewModel>();
             });
 

@@ -58,13 +58,51 @@
                 </Grid>
             </Border>
 
-            <!-- Preset action bar (slice 7 wires these up; stubbed here) -->
-            <Border DockPanel.Dock="Top" Padding="12,8">
+            <!-- Preset action bar (§8). Picker list lives inside the Flyout. -->
+            <Border DockPanel.Dock="Top" Padding="12,8"
+                    DataContext="{Binding PresetActions}"
+                    x:DataType="vm:PresetActionsViewModel">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Load preset ▾" IsEnabled="False"/>
-                    <Button Content="Save as preset…" IsEnabled="False"/>
-                    <Button Content="Update preset"
-                            IsEnabled="{Binding StreamForm.CanUpdatePreset}"/>
+                    <Button Content="Load preset ▾">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                <Grid RowDefinitions="Auto,Auto" MinWidth="240">
+                                    <TextBlock Grid.Row="0"
+                                               Opacity="0.7"
+                                               Margin="8,4"
+                                               IsVisible="{Binding !LoadPicker.HasPresets}"
+                                               Text="No presets saved yet."/>
+                                    <ItemsControl Grid.Row="1"
+                                                  ItemsSource="{Binding LoadPicker.Presets}"
+                                                  x:Name="PresetRows">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                                                    <Button Grid.Column="0"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            Content="{Binding Name}"
+                                                            Command="{Binding #PresetRows.((vm:PresetActionsViewModel)DataContext).LoadPicker.LoadCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="×"
+                                                            Padding="6,2"
+                                                            ToolTip.Tip="Delete this preset"
+                                                            Command="{Binding #PresetRows.((vm:PresetActionsViewModel)DataContext).LoadPicker.DeleteCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Content="Save as preset…"
+                            Command="{Binding SaveAsCommand}"/>
+                    <Button Content="{Binding UpdateButtonText}"
+                            Command="{Binding UpdateCurrentCommand}"
+                            IsVisible="{Binding ShowUpdateButton}"/>
                 </StackPanel>
             </Border>
 
