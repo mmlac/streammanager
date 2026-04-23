@@ -64,6 +64,7 @@ public static class Program
             .ConfigureServices((_, services) =>
             {
                 services.AddStreamManagerCore();
+                services.AddSingleton<StreamFormViewModel>();
                 services.AddSingleton<MainWindowViewModel>();
             });
 }

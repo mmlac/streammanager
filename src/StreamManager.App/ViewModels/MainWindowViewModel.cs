@@ -4,6 +4,15 @@ namespace StreamManager.App.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    [ObservableProperty]
-    private string _placeholder = "StreamManager — slice 1 shell";
+    public MainWindowViewModel()
+        : this(new StreamFormViewModel())
+    {
+    }
+
+    public MainWindowViewModel(StreamFormViewModel streamForm)
+    {
+        StreamForm = streamForm;
+    }
+
+    public StreamFormViewModel StreamForm { get; }
 }
