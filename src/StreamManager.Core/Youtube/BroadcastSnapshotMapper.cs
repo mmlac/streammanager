@@ -26,6 +26,7 @@ public static class BroadcastSnapshotMapper
         {
             BroadcastId = broadcast.Id ?? "",
             VideoId = video.Id ?? "",
+            LifeCycleStatus = status?.LifeCycleStatus ?? "",
 
             // snippet
             Title = snippet?.Title ?? "",

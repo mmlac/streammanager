@@ -5,7 +5,8 @@ public interface IGoogleOAuthFlow
     Task<TokenSet> AuthorizeInteractiveAsync(
         OAuthClient client,
         IReadOnlyList<string> scopes,
-        CancellationToken ct);
+        CancellationToken ct,
+        Action<string>? onAuthUrlReady = null);
 
     Task<TokenSet> RefreshAsync(
         OAuthClient client,

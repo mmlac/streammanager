@@ -1,3 +1,5 @@
+using Avalonia.Input.Platform;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -51,6 +53,14 @@ public sealed partial class ConnectAccountViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     private bool _isClientConfigured;
 
+    // Set while the browser-based OAuth flow is in progress so the user can
+    // copy the URL manually if the browser failed to open.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPendingAuthUrl))]
+    private string? _pendingAuthUrl;
+
+    public bool HasPendingAuthUrl => PendingAuthUrl is not null;
+
     private bool CanConnect => !IsBusy && !IsConnected && IsClientConfigured;
     private bool CanDisconnect => !IsBusy && IsConnected;
 
@@ -59,9 +69,15 @@ public sealed partial class ConnectAccountViewModel : ObservableObject, IDisposa
     {
         IsBusy = true;
         ErrorMessage = null;
+        PendingAuthUrl = null;
         try
         {
-            await _authenticator.ConnectInteractiveAsync(ct);
+            await _authenticator.ConnectInteractiveAsync(ct,
+                onAuthUrlReady: url => Dispatcher.UIThread.Post(() => PendingAuthUrl = url));
+        }
+        catch (OperationCanceledException)
+        {
+            // User cancelled — not an error worth displaying.
         }
         catch (Exception ex)
         {
@@ -71,7 +87,25 @@ public sealed partial class ConnectAccountViewModel : ObservableObject, IDisposa
         finally
         {
             IsBusy = false;
+            PendingAuthUrl = null;
         }
+    }
+
+    private bool CanCancelConnect => IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanCancelConnect))]
+    private void CancelConnect() => ConnectCommand.Cancel();
+
+    [RelayCommand(CanExecute = nameof(HasPendingAuthUrl))]
+    private async Task CopyAuthUrlAsync()
+    {
+        if (PendingAuthUrl is null) return;
+        var clipboard = Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desk
+            ? desk.MainWindow?.Clipboard
+            : null;
+        if (clipboard is not null)
+            await clipboard.SetTextAsync(PendingAuthUrl);
     }
 
     [RelayCommand(CanExecute = nameof(CanDisconnect))]
@@ -97,14 +131,20 @@ public sealed partial class ConnectAccountViewModel : ObservableObject, IDisposa
     partial void OnIsBusyChanged(bool value) => RaiseCanExecute();
     partial void OnIsConnectedChanged(bool value) => RaiseCanExecute();
     partial void OnIsClientConfiguredChanged(bool value) => RaiseCanExecute();
+    partial void OnPendingAuthUrlChanged(string? value) => CopyAuthUrlCommand.NotifyCanExecuteChanged();
 
     private void RaiseCanExecute()
     {
         ConnectCommand.NotifyCanExecuteChanged();
         DisconnectCommand.NotifyCanExecuteChanged();
+        CancelConnectCommand.NotifyCanExecuteChanged();
     }
 
-    private void OnStateChanged(object? sender, EventArgs e) => Refresh();
+    // AuthState.Changed fires on a thread-pool thread (the OAuth helpers use
+    // ConfigureAwait(false) throughout).  Marshal back to the UI thread before
+    // touching any observable properties.
+    private void OnStateChanged(object? sender, EventArgs e)
+        => Dispatcher.UIThread.Post(Refresh);
 
     private void Refresh()
     {

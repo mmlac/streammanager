@@ -38,19 +38,28 @@ public sealed class YouTubeClient : IYouTubeClient, IDisposable
 
         try
         {
-            var broadcastReq = _service.LiveBroadcasts.List(
-                new Repeatable<string>(new[] { "snippet", "status", "contentDetails" }));
-            broadcastReq.Mine = true;
-            broadcastReq.BroadcastStatus = LiveBroadcastsResource.ListRequest.BroadcastStatusEnum.Active;
-            broadcastReq.MaxResults = 1;
-            broadcastReq.OauthToken = token;
+            // Priority 1: a broadcast that is currently streaming.
+            var broadcast = await FindBroadcastAsync(
+                LiveBroadcastsResource.ListRequest.BroadcastStatusEnum.Active, token, ct)
+                .ConfigureAwait(false);
 
-            var broadcastResp = await broadcastReq.ExecuteAsync(ct).ConfigureAwait(false);
-            var broadcast = broadcastResp?.Items?.FirstOrDefault();
+            // Priority 2: a broadcast that is set up and ready to go live
+            // (the "Go Live" panel in YouTube Studio shows these as "upcoming"
+            // with lifeCycleStatus="ready").  Prefer ready > other upcoming states.
             if (broadcast is null)
             {
+                broadcast = await FindReadyUpcomingBroadcastAsync(token, ct)
+                    .ConfigureAwait(false);
+            }
+
+            if (broadcast is null)
+            {
+                _log.LogDebug("No active or ready-to-go-live broadcast found");
                 return null;
             }
+
+            _log.LogDebug("Using broadcast {Id} (lifeCycleStatus={Status})",
+                broadcast.Id, broadcast.Status?.LifeCycleStatus);
 
             var videoReq = _service.Videos.List(
                 new Repeatable<string>(new[] { "snippet", "contentDetails", "status", "localizations" }));
@@ -75,6 +84,55 @@ public sealed class YouTubeClient : IYouTubeClient, IDisposable
         {
             throw new UnauthorizedException("YouTube API returned 401.", ex);
         }
+    }
+
+    // Returns the first broadcast with the given broadcastStatus, or null.
+    private async Task<LiveBroadcast?> FindBroadcastAsync(
+        LiveBroadcastsResource.ListRequest.BroadcastStatusEnum status,
+        string token,
+        CancellationToken ct)
+    {
+        var req = _service.LiveBroadcasts.List(
+            new Repeatable<string>(new[] { "snippet", "status", "contentDetails" }));
+        req.BroadcastStatus = status;
+        req.MaxResults = 1;
+        req.OauthToken = token;
+        var resp = await req.ExecuteAsync(ct).ConfigureAwait(false);
+        return resp?.Items?.FirstOrDefault();
+    }
+
+    // Among upcoming broadcasts, prefer those with lifeCycleStatus "ready" or
+    // "liveStarting" over those that are merely "created" or "testing".
+    // These are the broadcasts visible in the YouTube Studio "Go Live" panel
+    // that the user wants to configure before going live.
+    private async Task<LiveBroadcast?> FindReadyUpcomingBroadcastAsync(
+        string token,
+        CancellationToken ct)
+    {
+        var req = _service.LiveBroadcasts.List(
+            new Repeatable<string>(new[] { "snippet", "status", "contentDetails" }));
+        req.BroadcastStatus = LiveBroadcastsResource.ListRequest.BroadcastStatusEnum.Upcoming;
+        // Fetch a small page so we can pick the most-ready one.
+        req.MaxResults = 10;
+        req.OauthToken = token;
+        var resp = await req.ExecuteAsync(ct).ConfigureAwait(false);
+        var items = resp?.Items;
+        if (items is null || items.Count == 0) return null;
+
+        // Rank: ready/liveStarting first, then testStarting/testing, then anything else.
+        static int Rank(string? s) => s switch
+        {
+            "ready"        => 0,
+            "liveStarting" => 1,
+            "testStarting" => 2,
+            "testing"      => 3,
+            _              => 99,
+        };
+
+        return items
+            .Where(b => b.Status?.LifeCycleStatus is not ("complete" or "revoked"))
+            .OrderBy(b => Rank(b.Status?.LifeCycleStatus))
+            .FirstOrDefault();
     }
 
     public async Task UpdateBroadcastAsync(BroadcastUpdate update, CancellationToken ct)

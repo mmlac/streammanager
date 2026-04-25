@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -131,12 +132,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     // Derived indicator flags consumed by MainWindow.axaml for the top-bar dot.
     public bool IsLiveIndicatorLive => LiveIndicator == LiveIndicatorStatus.Live;
+    public bool IsLiveIndicatorReady => LiveIndicator == LiveIndicatorStatus.Ready;
     public bool IsLiveIndicatorNotLive => LiveIndicator == LiveIndicatorStatus.NotLive;
     public bool IsLiveIndicatorFailed => LiveIndicator == LiveIndicatorStatus.FetchFailed;
 
     public string LiveIndicatorText => LiveIndicator switch
     {
         LiveIndicatorStatus.Live => "Live",
+        LiveIndicatorStatus.Ready => "Ready",
         LiveIndicatorStatus.NotLive => "Not live",
         LiveIndicatorStatus.FetchFailed => "Fetch failed",
         _ => "—",
@@ -145,6 +148,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     partial void OnLiveIndicatorChanged(LiveIndicatorStatus value)
     {
         OnPropertyChanged(nameof(IsLiveIndicatorLive));
+        OnPropertyChanged(nameof(IsLiveIndicatorReady));
         OnPropertyChanged(nameof(IsLiveIndicatorNotLive));
         OnPropertyChanged(nameof(IsLiveIndicatorFailed));
         OnPropertyChanged(nameof(LiveIndicatorText));
@@ -205,11 +209,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             return notConnected;
         }
 
+        _log.LogDebug("RunFetchAsync starting (allowOverwrite={AllowOverwrite})", allowOverwrite);
         IsFetching = true;
         FetchErrorMessage = null;
         try
         {
-            var result = await _fetchCoordinator.FetchAsync(allowOverwrite, ct).ConfigureAwait(false);
+            // Do NOT ConfigureAwait(false) here — we need the continuation
+            // (ApplyResultToIndicator, IsFetching=false) to run on the UI thread.
+            var result = await _fetchCoordinator.FetchAsync(allowOverwrite, ct);
+            _log.LogDebug("RunFetchAsync completed: Outcome={Outcome} Status={Status}",
+                result.Outcome, result.Status);
             ApplyResultToIndicator(result);
             return result;
         }
@@ -278,41 +287,65 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void OnFirstRunSaved(object? sender, EventArgs e) => Refresh();
 
-    private void OnConfigChanged(object? sender, EventArgs e) => Refresh();
+    private void OnConfigChanged(object? sender, EventArgs e)
+        => PostToUi(Refresh);
 
+    // AuthState.Changed fires from a thread-pool thread (all OAuth/userinfo
+    // helpers use ConfigureAwait(false)).  Avalonia will throw
+    // "Call from invalid thread" if we touch any AvaloniaObject (e.g. via
+    // RelayCommand.NotifyCanExecuteChanged → Button.IsEnabled) directly from
+    // there.  Dispatch the entire handler to the UI thread first.
     private void OnAuthStateChanged(object? sender, EventArgs e)
+        => PostToUi(OnAuthStateChangedOnUiThread);
+
+    private void OnAuthStateChangedOnUiThread()
     {
+        var connected = _authState.IsConnected;
+        _log.LogInformation("Auth state changed: IsConnected={Connected}", connected);
+
         SyncFromAuthState();
         RefreshCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanRefresh));
 
-        // §6.2: "App startup triggers one fetch automatically (after connect)."
-        // Every Connected transition triggers a fresh fetch — covers launch
-        // (after silent reconnect), interactive Connect, and reconnect after
-        // Disconnect so the form always mirrors the newly-active account.
-        if (_authState.IsConnected)
+        if (connected)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await RunFetchAsync(allowOverwrite: false, _disposed.Token)
-                        .ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) { /* shutdown */ }
-                catch (Exception ex)
-                {
-                    _log.LogWarning(ex, "Post-connect fetch failed");
-                }
-            });
+            // §6.2: fire-and-forget fetch on the UI thread context so that
+            // RunFetchAsync continuations land back on the UI thread without
+            // needing extra dispatching.
+            _log.LogDebug("Scheduling post-connect fetch");
+            _ = PostConnectFetchAsync();
         }
         else
         {
-            // Disconnected: reset indicator so UI doesn't linger on green.
+            _log.LogDebug("Auth disconnected — resetting live-state UI");
             LiveIndicator = LiveIndicatorStatus.Unknown;
             StreamForm.HasLiveBroadcast = false;
             StreamForm.RemoteThumbnailUrl = null;
         }
+    }
+
+    private async Task PostConnectFetchAsync()
+    {
+        try
+        {
+            _log.LogInformation("Post-connect fetch started");
+            await RunFetchAsync(allowOverwrite: false, _disposed.Token);
+        }
+        catch (OperationCanceledException) { /* shutdown */ }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Post-connect fetch failed unexpectedly");
+        }
+    }
+
+    // Ensure UI mutations always happen on the UI thread regardless of the
+    // calling context (mirrors the same helper in ReferenceDataViewModel).
+    private static void PostToUi(Action action)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+            action();
+        else
+            Dispatcher.UIThread.Post(action);
     }
 
     private void SyncFromAuthState()

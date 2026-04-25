@@ -27,13 +27,13 @@ public sealed class YouTubeAuthenticator : IYouTubeAuthenticator
         _log = log;
     }
 
-    public async Task<AccountInfo> ConnectInteractiveAsync(CancellationToken ct)
+    public async Task<AccountInfo> ConnectInteractiveAsync(CancellationToken ct, Action<string>? onAuthUrlReady = null)
     {
         var client = RequireConfiguredClient();
 
         _log.LogInformation("Starting interactive Google OAuth consent");
         var tokens = await _flow.AuthorizeInteractiveAsync(
-            client, IYouTubeAuthenticator.RequiredScopes, ct).ConfigureAwait(false);
+            client, IYouTubeAuthenticator.RequiredScopes, ct, onAuthUrlReady).ConfigureAwait(false);
 
         await _tokenStore.SetRefreshTokenAsync(tokens.RefreshToken, ct).ConfigureAwait(false);
         var account = await _userInfo.FetchAsync(tokens.AccessToken, ct).ConfigureAwait(false);

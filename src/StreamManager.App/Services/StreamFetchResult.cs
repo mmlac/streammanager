@@ -5,6 +5,7 @@ namespace StreamManager.App.Services;
 public enum StreamFetchOutcome
 {
     Live,
+    Ready,      // Broadcast exists and is set up but not yet streaming.
     NotLive,
     FetchFailed,
     Cancelled,

@@ -33,7 +33,8 @@ public sealed class GoogleOAuthFlow : IGoogleOAuthFlow
     public async Task<TokenSet> AuthorizeInteractiveAsync(
         OAuthClient client,
         IReadOnlyList<string> scopes,
-        CancellationToken ct)
+        CancellationToken ct,
+        Action<string>? onAuthUrlReady = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(scopes);
@@ -47,6 +48,7 @@ public sealed class GoogleOAuthFlow : IGoogleOAuthFlow
         {
             var redirectUri = $"http://127.0.0.1:{port}/";
             var authUrl = BuildAuthorizationUrl(client.ClientId, redirectUri, scopes, state, challenge);
+            onAuthUrlReady?.Invoke(authUrl);
             _browser.Launch(authUrl);
 
             var ctx = await listener.GetContextAsync().WaitAsync(ct).ConfigureAwait(false);

@@ -14,7 +14,7 @@ public interface IYouTubeAuthenticator
         "https://www.googleapis.com/auth/youtube.upload",
     };
 
-    Task<AccountInfo> ConnectInteractiveAsync(CancellationToken ct);
+    Task<AccountInfo> ConnectInteractiveAsync(CancellationToken ct, Action<string>? onAuthUrlReady = null);
     Task<AccountInfo?> TrySilentReconnectAsync(CancellationToken ct);
     Task DisconnectAsync(CancellationToken ct);
 }

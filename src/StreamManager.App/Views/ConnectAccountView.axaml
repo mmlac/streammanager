@@ -14,6 +14,17 @@
                 IsVisible="{Binding !IsConnected}"
                 Padding="12,4"/>
 
+        <!-- In-progress controls (shown while browser OAuth flow is open) -->
+        <Button Content="Copy URL"
+                Command="{Binding CopyAuthUrlCommand}"
+                IsVisible="{Binding HasPendingAuthUrl}"
+                ToolTip.Tip="Copy the Google sign-in URL to the clipboard for manual sign-in"
+                Padding="8,4"/>
+        <Button Content="Cancel"
+                Command="{Binding CancelConnectCommand}"
+                IsVisible="{Binding IsBusy}"
+                Padding="8,4"/>
+
         <!-- Connected state -->
         <StackPanel Orientation="Horizontal" Spacing="8"
                     VerticalAlignment="Center"

@@ -44,6 +44,10 @@
         <Style Selector="Ellipse.live-dot.live">
             <Setter Property="Fill" Value="#2ecc71" />
         </Style>
+        <Style Selector="Ellipse.live-dot.ready">
+            <!-- Blue: broadcast is set up and ready to go live. -->
+            <Setter Property="Fill" Value="#4A90E2" />
+        </Style>
         <Style Selector="Ellipse.live-dot.notlive">
             <Setter Property="Fill" Value="#888888" />
         </Style>
@@ -76,6 +80,7 @@
                                 ToolTip.Tip="{Binding FetchErrorMessage}">
                         <Ellipse Classes="live-dot"
                                  Classes.live="{Binding IsLiveIndicatorLive}"
+                                 Classes.ready="{Binding IsLiveIndicatorReady}"
                                  Classes.notlive="{Binding IsLiveIndicatorNotLive}"
                                  Classes.failed="{Binding IsLiveIndicatorFailed}"/>
                         <TextBlock Text="{Binding LiveIndicatorText}" VerticalAlignment="Center"/>

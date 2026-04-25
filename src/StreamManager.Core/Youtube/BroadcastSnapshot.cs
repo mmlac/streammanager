@@ -13,6 +13,10 @@ public sealed record BroadcastSnapshot
     public string BroadcastId { get; init; } = "";
     public string VideoId { get; init; } = "";
 
+    // lifeBroadcasts.list → status.lifeCycleStatus
+    // e.g. "live", "ready", "liveStarting", "testing", "created", "complete"
+    public string LifeCycleStatus { get; init; } = "";
+
     // --- liveBroadcasts.update → snippet ---
     public string Title { get; init; } = "";
     public string Description { get; init; } = "";

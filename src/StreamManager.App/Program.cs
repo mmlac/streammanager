@@ -53,11 +53,17 @@ public static class Program
                 var today = DateTime.Now.ToString("yyyy-MM-dd");
                 var logPath = Path.Combine(paths.LogsDirectory, $"streammanager-{today}.log");
                 cfg
-                    .MinimumLevel.Information()
+                    .MinimumLevel.Debug()
                     .WriteTo.File(
                         logPath,
                         shared: true,
-                        flushToDiskInterval: TimeSpan.FromSeconds(1));
+                        flushToDiskInterval: TimeSpan.FromSeconds(1),
+                        outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+#if DEBUG
+                    .WriteTo.Debug(
+                        outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+#endif
+                    ;
             })
             .ConfigureServices((_, services) =>
             {

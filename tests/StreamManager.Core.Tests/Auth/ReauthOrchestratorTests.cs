@@ -113,7 +113,7 @@ public class ReauthOrchestratorTests
     private sealed class FakeAuthenticator : IYouTubeAuthenticator
     {
         public int ConnectCalls;
-        public Task<AccountInfo> ConnectInteractiveAsync(CancellationToken ct)
+        public Task<AccountInfo> ConnectInteractiveAsync(CancellationToken ct, Action<string>? onAuthUrlReady = null)
         {
             ConnectCalls++;
             return Task.FromResult(new AccountInfo("test@example.com", null));

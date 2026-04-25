@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using StreamManager.App.ViewModels;
 using StreamManager.Core.Auth;
@@ -40,6 +41,9 @@ public sealed class StreamFetchCoordinator : IStreamFetchCoordinator
 
     public async Task<StreamFetchResult> FetchAsync(bool allowOverwrite, CancellationToken ct)
     {
+        _log.LogDebug("FetchAsync called (allowOverwrite={AllowOverwrite}, thread={Thread})",
+            allowOverwrite, Environment.CurrentManagedThreadId);
+
         if (!allowOverwrite)
         {
             var proceed = await _dirtyFormGuard.ConfirmOverwriteAsync(ct).ConfigureAwait(false);
@@ -83,7 +87,9 @@ public sealed class StreamFetchCoordinator : IStreamFetchCoordinator
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "Fetch failed; preserving last-known form state");
+            _log.LogWarning(ex,
+                "Fetch failed on thread {Thread}; preserving last-known form state",
+                Environment.CurrentManagedThreadId);
             return new StreamFetchResult(
                 StreamFetchOutcome.FetchFailed,
                 LiveIndicatorStatus.FetchFailed,
@@ -94,21 +100,42 @@ public sealed class StreamFetchCoordinator : IStreamFetchCoordinator
         {
             // Connected, no active broadcast. Form untouched — design says
             // "form shows last state ... Apply disabled, Not live indicator".
-            _form.HasLiveBroadcast = false;
-            _form.RemoteThumbnailUrl = null;
+            _log.LogInformation("Fetch: no active broadcast");
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _form.HasLiveBroadcast = false;
+                _form.RemoteThumbnailUrl = null;
+            });
             return new StreamFetchResult(
                 StreamFetchOutcome.NotLive,
                 LiveIndicatorStatus.NotLive);
         }
 
-        _form.SetLiveBaseline(ToFormSnapshot(snapshot), snapshot.BroadcastId, snapshot.VideoId);
-        _form.HasLiveBroadcast = true;
-        _form.RemoteThumbnailUrl = snapshot.ThumbnailUrl;
+        _log.LogInformation("Fetch: broadcast {BroadcastId} lifeCycleStatus={Status}",
+            snapshot.BroadcastId, snapshot.LifeCycleStatus);
+        var formSnapshot = ToFormSnapshot(snapshot);
+        // SetLiveBaseline → ApplySnapshotToForm modifies the Tags ObservableCollection.
+        // ObservableCollection events must be raised on the UI thread when the
+        // collection is bound to a control, otherwise Avalonia throws
+        // "Call from invalid thread".
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            _form.SetLiveBaseline(formSnapshot, snapshot.BroadcastId, snapshot.VideoId);
+            _form.HasLiveBroadcast = true;
+            _form.RemoteThumbnailUrl = snapshot.ThumbnailUrl;
+        });
 
-        return new StreamFetchResult(
-            StreamFetchOutcome.Live,
-            LiveIndicatorStatus.Live,
-            Snapshot: snapshot);
+        // Distinguish a broadcast that is actively streaming ("live") from one
+        // that is set up and waiting to go live ("ready", "liveStarting", etc.).
+        var (outcome, indicatorStatus) = snapshot.LifeCycleStatus switch
+        {
+            "live" or "liveStarting" =>
+                (StreamFetchOutcome.Live, LiveIndicatorStatus.Live),
+            _ =>
+                (StreamFetchOutcome.Ready, LiveIndicatorStatus.Ready),
+        };
+
+        return new StreamFetchResult(outcome, indicatorStatus, Snapshot: snapshot);
     }
 
     private static StreamFormSnapshot ToFormSnapshot(BroadcastSnapshot s) => new()
