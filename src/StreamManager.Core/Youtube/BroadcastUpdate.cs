@@ -45,6 +45,11 @@ public sealed record VideoUpdate
 {
     public string VideoId { get; init; } = "";
     public string Title { get; init; } = "";
+    // Description must be included because videos.update with part=snippet is a
+    // full snippet replacement.  Omitting it causes YouTube to overwrite the
+    // description with an empty string, wiping whatever liveBroadcasts.update
+    // just wrote in the preceding step.
+    public string Description { get; init; } = "";
     public string? CategoryId { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = Array.Empty<string>();
     public string? DefaultLanguage { get; init; }

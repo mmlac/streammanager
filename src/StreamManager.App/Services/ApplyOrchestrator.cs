@@ -278,6 +278,7 @@ public sealed class ApplyOrchestrator : IApplyOrchestrator
     {
         VideoId = videoId,
         Title = s.Title,
+        Description = s.Description,
         CategoryId = s.CategoryId,
         Tags = s.Tags,
         DefaultLanguage = s.DefaultLanguage,
