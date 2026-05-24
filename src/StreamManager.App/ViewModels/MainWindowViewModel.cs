@@ -242,15 +242,25 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnIsFetchingChanged(bool value)
     {
-        RefreshCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(CanApply));
-        ApplyCommand.NotifyCanExecuteChanged();
+        // Property may be set from a non-UI context (e.g. a thread-pool
+        // continuation).  Always dispatch UI-mutating calls to the UI thread.
+        PostToUi(() =>
+        {
+            RefreshCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(CanApply));
+            ApplyCommand.NotifyCanExecuteChanged();
+        });
     }
 
     partial void OnIsApplyingChanged(bool value)
     {
-        OnPropertyChanged(nameof(CanApply));
-        ApplyCommand.NotifyCanExecuteChanged();
+        // Same defensive dispatch — ApplyAsync now avoids ConfigureAwait(false)
+        // so this is already on the UI thread, but guard it anyway.
+        PostToUi(() =>
+        {
+            OnPropertyChanged(nameof(CanApply));
+            ApplyCommand.NotifyCanExecuteChanged();
+        });
     }
 
     partial void OnApplyStepChanged(ApplyStep value) =>
